@@ -285,7 +285,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
     <div class="screen active" id="tab-floorplan">
       <div class="stats-row">
         <div class="scard"><div class="val green" id="st-free">0</div><div class="lbl">Free</div></div>
-        <div class="scard"><div class="val red" id="st-occ">0</div><div class="lbl">Taken</div></div>
+        <div class="scard"><div class="val red" id="st-occ">0</div><div class="lbl">Parked</div></div>
         <div class="scard"><div class="val amber" id="st-res">0</div><div class="lbl">Reserved</div></div>
       </div>
       <div class="map-wrap">
@@ -294,7 +294,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
             <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px"><i class="ti ti-map-2"></i> <span id="map-area-label">Area</span></div>
             <div class="legend" style="margin:4px 0 0">
               <div class="leg"><div class="leg-dot" style="background:#c0dd97"></div>Free</div>
-              <div class="leg"><div class="leg-dot" style="background:#f7c1c1"></div>Taken</div>
+              <div class="leg"><div class="leg-dot" style="background:#f7c1c1"></div>Parked</div>
               <div class="leg"><div class="leg-dot" style="background:#fac775"></div>Reserved</div>
             </div>
           </div>
@@ -311,7 +311,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         <div id="list-view" style="display:none;padding:8px 10px">
           <div style="display:flex;gap:5px;margin-bottom:8px">
             <button class="map-view-btn active" id="lf-all" onclick="filterList('all',this)" style="flex:1">All</button>
-            <button class="map-view-btn" id="lf-occ" onclick="filterList('occ',this)" style="flex:1;color:var(--danger)">Taken</button>
+            <button class="map-view-btn" id="lf-occ" onclick="filterList('occ',this)" style="flex:1;color:var(--danger)">Parked</button>
             <button class="map-view-btn" id="lf-free" onclick="filterList('free',this)" style="flex:1;color:#2d7a1f">Free</button>
             <button class="map-view-btn" id="lf-res" onclick="filterList('reserved',this)" style="flex:1;color:var(--warn)">Resv</button>
           </div>
@@ -358,6 +358,8 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         <div class="r-row"><span>Type</span><span id="rc-type"></span></div>
         <div class="r-row"><span>Time In</span><span id="rc-in"></span></div>
         <div class="r-row"><span>Cashier</span><span id="rc-cashier"></span></div>
+        <div class="r-row" id="rc-paid-row" style="display:none"><span>Paid on Entry</span><span id="rc-paid-amt" style="font-weight:700;color:#2d7a1f"></span></div>
+        <div class="r-row" id="rc-valid-row" style="display:none"><span>Valid for</span><span id="rc-valid-note" style="color:var(--blue);font-weight:600"></span></div>
         <div class="r-row"><span>Status</span><span class="badge badge-active">Active</span></div>
       </div>
       <div class="card" style="margin-top:8px">
@@ -373,11 +375,19 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         <div class="r-row"><span>Type</span><span id="cor-type"></span></div>
         <div class="r-row"><span>Duration</span><span id="cor-dur"></span></div>
         <div class="r-row"><span>Breakdown</span><span id="cor-breakdown" style="text-align:right;max-width:55%;font-size:10px;line-height:1.5"></span></div>
+        <div class="r-row" id="cor-upfront-row" style="display:none"><span>Paid on Entry</span><span id="cor-upfront" style="color:#2d7a1f;font-weight:700"></span></div>
+        <div class="r-row" id="cor-addl-row" style="display:none"><span>Additional Charge</span><span id="cor-addl" style="color:var(--danger);font-weight:700"></span></div>
+        <div class="r-row" id="cor-noaddl-row" style="display:none"><span>Additional Charge</span><span id="cor-noaddl" style="color:#2d7a1f;font-weight:600">None</span></div>
         <div class="r-row" id="cor-reg-row" style="display:none"><span>Regular Rate</span><span id="cor-regular" style="text-decoration:line-through;color:var(--muted)"></span></div>
         <div class="r-row" id="cor-disc-row" style="display:none"><span>PWD Discount (20%)</span><span id="cor-discount" style="color:var(--accent);font-weight:700"></span></div>
         <div class="r-row" id="cor-vat-row" style="display:none"><span>VAT (12%) incl.</span><span id="cor-vat" style="color:var(--muted)"></span></div>
         <div class="r-total"><span>Total</span><span id="cor-total"></span></div>
         <div style="text-align:center;margin-top:8px"><span class="badge badge-paid">Paid ✓</span></div>
+      </div>
+      <!-- Audit + Logout row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <button class="btn" style="background:#f0e6fb;color:#7a0585;border-color:#d4a8f0" onclick="openAuditModal()"><i class="ti ti-report-money"></i> Audit</button>
+        <button class="btn btn-danger" onclick="cashierLogout()"><i class="ti ti-logout"></i> End Duty</button>
       </div>
     </div>
 
@@ -638,117 +648,204 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
   </div><!-- /screens -->
 </div><!-- /shell -->
 
-<!-- ═══ FIREBASE (compat SDK) ═══ -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script>
-// Firebase is now loaded synchronously above — safe to use immediately
-(function(){
-  firebase.initializeApp({
-    apiKey:            "AIzaSyBJo3FiaGEdyFXnAPsAQkV3wNDpJKQaF4k",
-    authDomain:        "streetparking-b4c4c.firebaseapp.com",
-    databaseURL:       "https://streetparking-b4c4c-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId:         "streetparking-b4c4c",
-    storageBucket:     "streetparking-b4c4c.firebasestorage.app",
-    messagingSenderId: "335899183214",
-    appId:             "1:335899183214:web:04c1ee8f2679f8f7023e7f"
-  });
-  const db = firebase.database();
+<!-- ═══ FIREBASE SDK ═══ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update, push, remove, get }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  function setSyncStatus(state){
-    const dot=document.getElementById('fb-dot'),lbl=document.getElementById('fb-lbl');
-    if(!dot||!lbl)return;
-    const m={syncing:['#f5a623','Syncing…'],ok:['#1d9e75','Live ✓'],err:['#a32d2d','Offline']};
-    const [c,t]=m[state]||m.ok; dot.style.background=c; lbl.textContent=t;
+  // ┌─────────────────────────────────────────────────────┐
+  // │  PASTE YOUR FIREBASE CONFIG HERE                    │
+  // │  (from Firebase Console → Project Settings → Web)  │
+  // └─────────────────────────────────────────────────────┘
+  const FIREBASE_CONFIG = {
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
+  apiKey: "AIzaSyBJo3FiaGEdyFXnAPsAQkV3wNDpJKQaF4k",
+  authDomain: "streetparking-b4c4c.firebaseapp.com",
+  databaseURL: "https://streetparking-b4c4c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "streetparking-b4c4c",
+  storageBucket: "streetparking-b4c4c.firebasestorage.app",
+  messagingSenderId: "335899183214",
+  appId: "1:335899183214:web:04c1ee8f2679f8f7023e7f",
+  measurementId: "G-W6GNVX2PSR"
+
+  };
+
+
+
+  // ── Init ────────────────────────────────────────────────
+  const app = initializeApp(FIREBASE_CONFIG);
+  const db  = getDatabase(app);
+
+  // Expose helpers to global scope so the existing code can call them
+  window._fb = { db, ref, onValue, set, update, push, remove, get };
+  window._fbReady = true;
+
+  // ── Sync indicator helper ────────────────────────────────
+  function setSyncStatus(state){           // 'syncing' | 'ok' | 'err'
+    const dot = document.getElementById('fb-dot');
+    const lbl = document.getElementById('fb-lbl');
+    if(!dot||!lbl) return;
+    const map = {
+      syncing:['#f5a623','Syncing…'],
+      ok:     ['#1d9e75','Live ✓'],
+      err:    ['#a32d2d','Offline']
+    };
+    const [color,text] = map[state]||map.ok;
+    dot.style.background = color;
+    lbl.textContent = text;
   }
   window._setSyncStatus = setSyncStatus;
 
-  // Live connection indicator
-  db.ref('.info/connected').on('value', snap => setSyncStatus(snap.val()?'ok':'err'));
+  // ════════════════════════════════════════════════════════
+  // WHAT SYNCS TO FIREBASE
+  // ════════════════════════════════════════════════════════
+  //
+  //  /parking/
+  //    config/          ← settings, rates, vehicle types, cashiers, areas (Admin writes)
+  //    live/            ← slot statuses, active sessions (Cashier writes, all read)
+  //    txLog/           ← transaction log entries (Cashier writes, Admin reads)
+  //
+  // ════════════════════════════════════════════════════════
 
-  // Save helpers
+  // ── SAVE CONFIG (Admin only: rates, staff, areas, biz info) ──
   window.fbSaveConfig = function(){
+    if(!window._fbReady){ window.saveToLS(); return; }
     setSyncStatus('syncing');
-    const p={
-      bizName:window.bizName,bizLoc:window.bizLoc,
-      rates:window.rates,VEHICLE_TYPES:window.VEHICLE_TYPES,cashiers:window.cashiers,
-      areas:window.areas.map(a=>({id:a.id,name:a.name,sideALabel:a.sideALabel,sideBLabel:a.sideBLabel,
-        slots:a.slots.map(s=>({id:s.id,area:s.area,side:s.side,num:s.num,
-          status:s.status,plate:s.plate||'',type:s.type||'',since:s.since||null,ticket:s.ticket||null}))})),
-      currentAreaId:window.currentAreaId,savedAt:Date.now()
+    const payload = {
+      bizName:      window.bizName,
+      bizLoc:       window.bizLoc,
+      rates:        window.rates,
+      VEHICLE_TYPES:window.VEHICLE_TYPES,
+      cashiers:     window.cashiers,
+      areas: window.areas.map(a=>({
+        id:a.id, name:a.name,
+        sideALabel:a.sideALabel, sideBLabel:a.sideBLabel,
+        slots: a.slots.map(s=>({
+          id:s.id, area:s.area, side:s.side, num:s.num,
+          status:s.status, plate:s.plate||'', type:s.type||'',
+          since:s.since||null, ticket:s.ticket||null
+        }))
+      })),
+      currentAreaId:window.currentAreaId,
+      savedAt: Date.now()
     };
-    db.ref('parking/config').set(p)
-      .then(()=>{setSyncStatus('ok');window.saveToLS&&window.saveToLS();})
-      .catch(e=>{console.warn('FB config save failed',e);setSyncStatus('err');window.saveToLS&&window.saveToLS();});
+    set(ref(db,'parking/config'), payload)
+      .then(()=>{ setSyncStatus('ok'); window.saveToLS(); })
+      .catch(e=>{ console.warn('FB config save failed',e); setSyncStatus('err'); window.saveToLS(); });
   };
 
+  // ── SAVE LIVE SLOT STATE (any role: check-in / check-out / reserve) ──
   window.fbSaveLive = function(){
+    if(!window._fbReady){ window.saveToLS(); return; }
     setSyncStatus('syncing');
-    const live={};
-    window.areas.forEach(a=>a.slots.forEach(s=>{
-      live[s.id]={status:s.status,plate:s.plate||'',type:s.type||'',since:s.since||null,ticket:s.ticket||null,area:a.id};
+    const liveSlots = {};
+    window.areas.forEach(a => a.slots.forEach(s => {
+      liveSlots[s.id] = {
+        status:s.status, plate:s.plate||'', type:s.type||'',
+        since:s.since||null, ticket:s.ticket||null, area:a.id
+      };
     }));
-    db.ref('parking/live').set(live)
-      .then(()=>{setSyncStatus('ok');window.saveToLS&&window.saveToLS();})
-      .catch(e=>{console.warn('FB live save failed',e);setSyncStatus('err');window.saveToLS&&window.saveToLS();});
+    set(ref(db,'parking/live'), liveSlots)
+      .then(()=>{ setSyncStatus('ok'); window.saveToLS(); })
+      .catch(e=>{ console.warn('FB live save failed',e); setSyncStatus('err'); window.saveToLS(); });
   };
 
+  // ── APPEND TX LOG ENTRY ──
   window.fbPushLog = function(entry){
-    db.ref('parking/txLog').push({...entry,ts:Date.now()})
+    if(!window._fbReady) return;
+    push(ref(db,'parking/txLog'), entry)
       .catch(e=>console.warn('FB log push failed',e));
   };
 
-  // Called after main script exposes all window.* globals
-  window._fbStartListeners = function(){
-    db.ref('parking/config').on('value', snap=>{
-      const d=snap.val();if(!d)return;
+  // ════════════════════════════════════════════════════════
+  // REAL-TIME LISTENERS (subscribe once DOM is ready)
+  // ════════════════════════════════════════════════════════
+  window.addEventListener('DOMContentLoaded', ()=>{
+
+    // ── Listen: CONFIG ───────────────────────────────────
+    onValue(ref(db,'parking/config'), snap => {
+      const d = snap.val();
+      if(!d) return;
       try{
-        if(d.bizName)window.bizName=d.bizName;
-        if(d.bizLoc)window.bizLoc=d.bizLoc;
-        if(d.rates)Object.assign(window.rates,d.rates);
-        if(d.VEHICLE_TYPES&&d.VEHICLE_TYPES.length){window.VEHICLE_TYPES.length=0;d.VEHICLE_TYPES.forEach(t=>window.VEHICLE_TYPES.push(t));}
-        if(d.cashiers&&d.cashiers.length){window.cashiers.length=0;d.cashiers.forEach(c=>window.cashiers.push(c));}
-        if(d.areas&&d.areas.length){
-          const lm={};window.areas.forEach(a=>a.slots.forEach(s=>{lm[s.id]=s;}));
+        if(d.bizName)  window.bizName = d.bizName;
+        if(d.bizLoc)   window.bizLoc  = d.bizLoc;
+        if(d.rates)    Object.assign(window.rates, d.rates);
+        if(d.VEHICLE_TYPES && d.VEHICLE_TYPES.length){
+          window.VEHICLE_TYPES.length=0;
+          d.VEHICLE_TYPES.forEach(t => window.VEHICLE_TYPES.push(t));
+        }
+        if(d.cashiers && d.cashiers.length){
+          window.cashiers.length=0;
+          d.cashiers.forEach(c => window.cashiers.push(c));
+        }
+        if(d.areas && d.areas.length){
+          // Merge areas: keep live slot state, update structure from config
+          const liveMap={};
+          window.areas.forEach(a=>a.slots.forEach(s=>{ liveMap[s.id]=s; }));
           window.areas.length=0;
           d.areas.forEach(a=>{
-            a.slots=a.slots.map(s=>lm[s.id]?{...s,status:lm[s.id].status,plate:lm[s.id].plate,
-              type:lm[s.id].type,since:lm[s.id].since,ticket:lm[s.id].ticket}:s);
+            a.slots = a.slots.map(s => liveMap[s.id]
+              ? {...s, status:liveMap[s.id].status, plate:liveMap[s.id].plate,
+                       type:liveMap[s.id].type, since:liveMap[s.id].since, ticket:liveMap[s.id].ticket}
+              : s);
             window.areas.push(a);
           });
-          if(d.currentAreaId)window.currentAreaId=d.currentAreaId;
+          if(d.currentAreaId) window.currentAreaId = d.currentAreaId;
         }
+        // Refresh UI
         const hdr=document.getElementById('hdr-biz-name');if(hdr)hdr.textContent=window.bizName;
-        const bn=document.getElementById('biz-name'),bl=document.getElementById('biz-loc');
-        if(bn)bn.value=window.bizName;if(bl)bl.value=window.bizLoc;
-        ['buildRatesEditor','renderCashiers','renderAreaList','renderAreaTabs',
-         'renderFloorplan','refreshSlotDropdown','updateOnDutyWidget']
-          .forEach(fn=>{if(typeof window[fn]==='function')window[fn]();});
-      }catch(e){console.warn('FB config apply error',e);}
-    },e=>{console.warn('FB config error',e);setSyncStatus('err');});
+        const bnEl=document.getElementById('biz-name'),blEl=document.getElementById('biz-loc');
+        if(bnEl)bnEl.value=window.bizName; if(blEl)blEl.value=window.bizLoc;
+        if(typeof window.buildRatesEditor==='function')   window.buildRatesEditor();
+        if(typeof window.renderCashiers==='function')     window.renderCashiers();
+        if(typeof window.renderAreaList==='function')     window.renderAreaList();
+        if(typeof window.renderAreaTabs==='function')     window.renderAreaTabs();
+        if(typeof window.renderFloorplan==='function')    window.renderFloorplan();
+        if(typeof window.refreshSlotDropdown==='function')window.refreshSlotDropdown();
+        if(typeof window.updateOnDutyWidget==='function') window.updateOnDutyWidget();
+        setSyncStatus('ok');
+      }catch(e){ console.warn('FB config apply error',e); }
+    }, e=>{ console.warn('FB config listener error',e); setSyncStatus('err'); });
 
-    db.ref('parking/live').on('value', snap=>{
-      const d=snap.val();if(!d)return;
+    // ── Listen: LIVE SLOTS ───────────────────────────────
+    onValue(ref(db,'parking/live'), snap => {
+      const d = snap.val();
+      if(!d) return;
       try{
-        window.areas.forEach(a=>a.slots.forEach(s=>{
-          if(d[s.id]){s.status=d[s.id].status||'free';s.plate=d[s.id].plate||'';
-            s.type=d[s.id].type||'';s.since=d[s.id].since||null;s.ticket=d[s.id].ticket||null;}
+        window.areas.forEach(a => a.slots.forEach(s => {
+          if(d[s.id]){
+            s.status = d[s.id].status || 'free';
+            s.plate  = d[s.id].plate  || '';
+            s.type   = d[s.id].type   || '';
+            s.since  = d[s.id].since  || null;
+            s.ticket = d[s.id].ticket || null;
+          }
         }));
-        ['renderFloorplan','refreshSlotDropdown','renderAdmin']
-          .forEach(fn=>{if(typeof window[fn]==='function')window[fn]();});
-      }catch(e){console.warn('FB live apply error',e);}
-    },e=>{console.warn('FB live error',e);setSyncStatus('err');});
+        if(typeof window.renderFloorplan==='function')    window.renderFloorplan();
+        if(typeof window.refreshSlotDropdown==='function')window.refreshSlotDropdown();
+        if(typeof window.renderAdmin==='function')        window.renderAdmin();
+        setSyncStatus('ok');
+      }catch(e){ console.warn('FB live apply error',e); }
+    }, e=>{ console.warn('FB live listener error',e); setSyncStatus('err'); });
 
-    db.ref('parking/txLog').on('value', snap=>{
-      const d=snap.val();if(!d)return;
+    // ── Listen: TX LOG ───────────────────────────────────
+    onValue(ref(db,'parking/txLog'), snap => {
+      const d = snap.val();
+      if(!d) return;
       try{
         window.txLog.length=0;
-        Object.values(d).sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(e=>window.txLog.push(e));
-        ['renderLog','renderAdmin'].forEach(fn=>{if(typeof window[fn]==='function')window[fn]();});
-      }catch(e){console.warn('FB txLog apply error',e);}
-    },e=>{console.warn('FB txLog error',e);setSyncStatus('err');});
-  };
-})();
+        // Firebase stores as object keyed by push-id; sort by time desc
+        Object.values(d)
+          .sort((a,b)=>(b.ts||0)-(a.ts||0))
+          .forEach(e=>window.txLog.push(e));
+        if(typeof window.renderLog==='function')   window.renderLog();
+        if(typeof window.renderAdmin==='function') window.renderAdmin();
+      }catch(e){ console.warn('FB txLog apply error',e); }
+    }, e=>{ console.warn('FB txLog listener error',e); setSyncStatus('err'); });
+
+  });
 </script>
 
 <script>
@@ -808,16 +905,18 @@ function computeFee(type,mins,_opts){
   let fee=0,breakdown=[],regularFee=0;
 
   // ── Private Vehicle: Pay-as-you-park ─────────────────────────
-  // Entry ₱60 (covers first 30 min), then every 30 min or fraction ₱30
+  // Pay ₱60 upfront (invoice + receipt), good for 1 hour.
+  // Duration ≤ 1 hour → no additional charge.
+  // Every 30 min (or fraction) beyond 1 hour → ₱30 additional.
   if(r.mode==='payg'){
     const firstRate=r.firstRate||60,succRate=r.succRate||30;
     if(mins<=0)return{fee:0,breakdown:'No charge',regularFee:0};
-    fee=firstRate;breakdown.push(`Entry ₱${firstRate}`);
-    if(mins>30){const extra=Math.ceil((mins-30)/30);fee+=extra*succRate;breakdown.push(`${extra}×30min ₱${succRate}`);}
+    fee=firstRate;breakdown.push(`₱${firstRate} paid on entry (1h)`);
+    if(mins>60){const extra=Math.ceil((mins-60)/30);fee+=extra*succRate;breakdown.push(`+${extra}×30min ₱${succRate}`);}
     fee=Math.ceil(fee);
     const vatAmt=Math.round(fee/1.12*0.12);
     breakdown.push(`VAT incl. ₱${vatAmt}`);
-    return{fee,breakdown:breakdown.join(' + '),regularFee:fee};
+    return{fee,breakdown:breakdown.join(' + '),regularFee:fee,upfrontPaid:firstRate,additionalFee:fee-firstRate};
   }
 
   // ── QC Senior: First 3h free, then ₱30 per 30 min or fraction ─
@@ -921,7 +1020,7 @@ function renderFloorplan(){
 
     // ── EAST row label ──
     const eastHdr=sideLabel('EAST ↑  E1–E13  (E13 = PWD)','#e8edf5','var(--navy)');
-    eastHdr.querySelector('span').innerHTML+=`<span style="margin-left:auto;font-size:9px;color:var(--muted);font-weight:500;"><b style="color:#2d7a1f">${fA}</b> free · <b style="color:var(--danger)">${oA}</b> taken</span>`;
+    eastHdr.querySelector('span').innerHTML+=`<span style="margin-left:auto;font-size:9px;color:var(--muted);font-weight:500;"><b style="color:#2d7a1f">${fA}</b> free · <b style="color:var(--danger)">${oA}</b> parked</span>`;
     eastHdr.style.cssText+='justify-content:space-between;';
     wrap.appendChild(eastHdr);
 
@@ -946,7 +1045,7 @@ function renderFloorplan(){
     // ── WEST row label ──
     const westHdr=document.createElement('div');
     westHdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:3px 8px;background:#e6f1fb;margin-top:3px;';
-    westHdr.innerHTML=`<span style="font-size:9px;font-weight:800;color:var(--blue);letter-spacing:.6px;">WEST ↓  W14–W33</span><span style="font-size:9px;color:var(--muted);"><b style="color:#2d7a1f">${fB}</b> free · <b style="color:var(--danger)">${oB}</b> taken</span>`;
+    westHdr.innerHTML=`<span style="font-size:9px;font-weight:800;color:var(--blue);letter-spacing:.6px;">WEST ↓  W14–W33</span><span style="font-size:9px;color:var(--muted);"><b style="color:#2d7a1f">${fB}</b> free · <b style="color:var(--danger)">${oB}</b> parked</span>`;
     wrap.appendChild(westHdr);
 
     // ── WEST slots: two sub-rows of 10 ──
@@ -971,7 +1070,7 @@ function renderFloorplan(){
     const counts=document.createElement('div');
     counts.style.cssText='display:flex;gap:5px;padding:4px 5px 5px;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--bg);border-radius:0 0 4px 4px;';
     const total=sideA.length+sideB.length,free=fA+fB,occ2=oA+oB;
-    counts.innerHTML=`<span style="font-size:9px;font-weight:600;color:#2d7a1f;background:#eaf3de;padding:2px 9px;border-radius:20px;">${free} Free</span><span style="font-size:9px;font-weight:600;color:var(--danger);background:#fcebeb;padding:2px 9px;border-radius:20px;">${occ2} Taken</span><span style="font-size:9px;font-weight:600;color:var(--muted);background:var(--bg);padding:2px 9px;border-radius:20px;border:1px solid var(--border)">${total} Total</span>`;
+    counts.innerHTML=`<span style="font-size:9px;font-weight:600;color:#2d7a1f;background:#eaf3de;padding:2px 9px;border-radius:20px;">${free} Free</span><span style="font-size:9px;font-weight:600;color:var(--danger);background:#fcebeb;padding:2px 9px;border-radius:20px;">${occ2} Parked</span><span style="font-size:9px;font-weight:600;color:var(--muted);background:var(--bg);padding:2px 9px;border-radius:20px;border:1px solid var(--border)">${total} Total</span>`;
     wrap.appendChild(counts);
 
     mapEl.appendChild(wrap);
@@ -981,7 +1080,7 @@ function renderFloorplan(){
     if(sideA.length){
       const hdrA=document.createElement('div');
       hdrA.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:0 2px;margin-bottom:2px';
-      hdrA.innerHTML=`<span style="font-size:9px;font-weight:700;color:var(--navy);background:#e8edf5;padding:2px 7px;border-radius:4px">${a.sideALabel} →</span><span style="font-size:9px;color:var(--muted)">${sideA.filter(x=>x.status==='free').length} free / ${sideA.filter(x=>x.status==='occ').length} taken</span>`;
+      hdrA.innerHTML=`<span style="font-size:9px;font-weight:700;color:var(--navy);background:#e8edf5;padding:2px 7px;border-radius:4px">${a.sideALabel} →</span><span style="font-size:9px;color:var(--muted)">${sideA.filter(x=>x.status==='free').length} free / ${sideA.filter(x=>x.status==='occ').length} parked</span>`;
       mapEl.appendChild(hdrA);
       const rowWrap=document.createElement('div');rowWrap.className='lot-row-wrap';
       const lbl=document.createElement('div');lbl.className='lot-row-label';lbl.textContent=a.sideALabel;
@@ -998,7 +1097,7 @@ function renderFloorplan(){
     if(sideB.length){
       const hdrB=document.createElement('div');
       hdrB.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:0 2px;margin-bottom:2px;margin-top:3px';
-      hdrB.innerHTML=`<span style="font-size:9px;font-weight:700;color:var(--blue);background:#e6f1fb;padding:2px 7px;border-radius:4px">← ${a.sideBLabel}</span><span style="font-size:9px;color:var(--muted)">${sideB.filter(x=>x.status==='free').length} free / ${sideB.filter(x=>x.status==='occ').length} taken</span>`;
+      hdrB.innerHTML=`<span style="font-size:9px;font-weight:700;color:var(--blue);background:#e6f1fb;padding:2px 7px;border-radius:4px">← ${a.sideBLabel}</span><span style="font-size:9px;color:var(--muted)">${sideB.filter(x=>x.status==='free').length} free / ${sideB.filter(x=>x.status==='occ').length} parked</span>`;
       mapEl.appendChild(hdrB);
       const rowWrap=document.createElement('div');rowWrap.className='lot-row-wrap';
       const lbl=document.createElement('div');lbl.className='lot-row-label side-b';lbl.textContent=a.sideBLabel;
@@ -1024,16 +1123,48 @@ function makeCell(s){
   const d=document.createElement('div');
   d.className='slot-cell '+s.status+(selSlot===s.id?' selected':'');
   d.id='sv-'+s.id;
-  d.style.cssText='width:100%;min-width:0;height:72px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid transparent;transition:transform .1s;position:relative;overflow:hidden;flex-shrink:0;';
-  if(s.status==='free') d.style.cssText+='background:#eaf3de;border-color:#6aa82a;';
-  else if(s.status==='occ') d.style.cssText+='background:#fcebeb;border-color:#e24b4a;';
-  else d.style.cssText+='background:#faeeda;border-color:#ba7517;';
-  if(selSlot===s.id) d.style.cssText+='outline:2px solid var(--blue);outline-offset:1px;box-shadow:0 0 0 3px rgba(24,95,165,.2);z-index:2;';
+  const bg=s.status==='free'?'#eaf3de':s.status==='occ'?'#fcebeb':'#faeeda';
+  const bc=s.status==='free'?'#6aa82a':s.status==='occ'?'#e24b4a':'#ba7517';
+  const selExtra=selSlot===s.id?'outline:2px solid var(--blue);outline-offset:1px;box-shadow:0 0 0 3px rgba(24,95,165,.2);z-index:2;':'';
+  d.style.cssText=`width:100%;min-width:0;height:72px;border-radius:5px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;cursor:pointer;border:1.5px solid ${bc};transition:transform .1s;position:relative;overflow:hidden;flex-shrink:0;background:${bg};${selExtra}`;
   const icon=s.type==='Motorcycle'?'ti-motorbike':s.type==='Delivery'?'ti-truck':'ti-car';
-  const plateColor=s.status==='free'?'#3b6d11':s.status==='occ'?'#a32d2d':'#ba7517';
+  const iconColor=s.status==='free'?'#6aa82a':s.status==='occ'?'#e24b4a':'#ba7517';
   const plateParts=s.plate?s.plate.split(' '):'';
-  const plateHtml=plateParts.length===2?`<div style="font-size:6px;font-weight:700;color:${plateColor};line-height:1.2;text-align:center">${plateParts[0]}<br>${plateParts[1]}</div>`:(s.plate?`<div style="font-size:6px;font-weight:700;color:${plateColor};text-align:center">${s.plate}</div>`:'');
-  d.innerHTML=`<div style="font-size:7px;font-weight:800;color:#2c2c2a;line-height:1;margin-bottom:2px">${s.id}</div>${plateHtml}<i class="ti ${icon}" style="font-size:13px;color:${s.status==='free'?'#6aa82a':s.status==='occ'?'#e24b4a':'#ba7517'};line-height:1;margin-top:2px"></i>`;
+  const plateStr=plateParts.length===2?plateParts[0]+' '+plateParts[1]:(s.plate||'');
+
+  if(s.status==='occ'&&s.since){
+    const mins=Math.floor((Date.now()-s.since)/60000);
+    const {fee}=computeFee(s.type||'Private Vehicle',mins);
+    const durStr=mins>=60?Math.floor(mins/60)+'h'+(mins%60?mins%60+'m':''):mins+'m';
+    // Occupied layout: ID top-left | icon top-right | plate middle | dur row | fee row
+    d.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 4px 0;">
+        <span style="font-size:7px;font-weight:800;color:#2c2c2a;line-height:1;">${s.id}</span>
+        <i class="ti ${icon}" style="font-size:11px;color:${iconColor};line-height:1;"></i>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:0 2px;">
+        <div style="font-size:6px;font-weight:700;color:#a32d2d;text-align:center;line-height:1.2;word-break:break-all;">${plateStr}</div>
+      </div>
+      <div style="background:#7a1f1f;padding:1px 4px;text-align:center;">
+        <span style="font-size:6.5px;font-weight:800;color:#ffc8c8;white-space:nowrap;letter-spacing:.2px;">${durStr}</span>
+      </div>
+      <div style="background:#a32d2d;padding:2px 4px;text-align:center;">
+        <span style="font-size:7px;font-weight:900;color:#fff;white-space:nowrap;">&#8369;${fee}</span>
+      </div>`;
+  } else if(s.status==='reserved'){
+    const plateColor='#ba7517';
+    d.style.cssText+=';align-items:center;justify-content:center;';
+    d.innerHTML=`
+      <div style="font-size:7px;font-weight:800;color:#2c2c2a;line-height:1;margin-bottom:2px;">${s.id}</div>
+      <i class="ti ${icon}" style="font-size:11px;color:${iconColor};line-height:1;"></i>
+      <div style="font-size:5.5px;font-weight:800;color:#ba7517;text-align:center;margin-top:2px;line-height:1.3;">${plateStr}</div>
+      <div style="font-size:5px;font-weight:700;color:#ba7517;letter-spacing:.4px;text-transform:uppercase;margin-top:1px;">RESERVED</div>`;
+  } else {
+    d.style.cssText+=';align-items:center;justify-content:center;';
+    d.innerHTML=`
+      <div style="font-size:7px;font-weight:800;color:#2c2c2a;line-height:1;margin-bottom:2px;">${s.id}</div>
+      <i class="ti ${icon}" style="font-size:13px;color:${iconColor};line-height:1;"></i>`;
+  }
   d.onclick=()=>selectSlot(s.id);
   return d;
 }
@@ -1085,11 +1216,21 @@ function selectSlot(id){
   const body=document.getElementById('pp-body'),acts=document.getElementById('pp-acts');
   if(s.status==='free'){
     body.innerHTML=`<div class="pp-row"><span>Status</span><span style="color:#2d7a1f;font-weight:600">Available</span></div>`;
-    acts.innerHTML=`<button class="btn btn-primary" onclick="prefillCI('${id}')"><i class="ti ti-car"></i> Assign Vehicle</button><button class="btn btn-warn" onclick="reserveSlot('${id}')"><i class="ti ti-bookmark"></i> Mark Reserved</button>`;
+    acts.innerHTML=`
+      <button class="btn btn-primary" style="margin-top:6px;padding:12px;font-size:14px" onclick="prefillCI('${id}')"><i class="ti ti-car"></i> Check In Here</button>
+      <button class="btn btn-warn" style="margin-top:6px;padding:12px;font-size:14px" onclick="reserveSlot('${id}')"><i class="ti ti-bookmark"></i> Mark Reserved</button>
+      <button class="btn" style="margin-top:6px;padding:12px;font-size:14px;background:var(--bg)" onclick="closePopup()"><i class="ti ti-x"></i> Close</button>`;
   }else if(s.status==='occ'){
     const mins=Math.floor((Date.now()-s.since)/60000),{fee,breakdown}=computeFee(s.type,mins);
-    body.innerHTML=`<div class="pp-row"><span>Ticket No.</span><span style="font-family:monospace;font-weight:700;color:var(--blue)">${s.ticket||'—'}</span></div><div class="pp-row"><span>Plate</span><span style="font-weight:600">${s.plate}</span></div><div class="pp-row"><span>Type</span><span>${s.type}</span></div><div class="pp-row"><span>Duration</span><span>${fmtDur(mins)}</span></div><div class="pp-row"><span>Est. fee</span><span style="color:var(--danger);font-weight:700">₱${fee}</span></div><div class="pp-row" style="border:none"><span>Breakdown</span><span style="font-size:10px;text-align:right;max-width:60%">${breakdown}</span></div>`;
-    acts.innerHTML=`<button class="btn btn-primary" onclick="prefillCO('${s.plate}')"><i class="ti ti-logout"></i> Check Out</button>`;
+    body.innerHTML=`
+      <div class="pp-row"><span>Ticket No.</span><span style="font-family:monospace;font-weight:700;color:var(--blue)">${s.ticket||'—'}</span></div>
+      <div class="pp-row"><span>Plate</span><span style="font-weight:600">${s.plate}</span></div>
+      <div class="pp-row"><span>Type</span><span>${s.type}</span></div>
+      <div class="pp-row"><span>Breakdown</span><span style="font-size:10px;text-align:right;max-width:60%">${breakdown}</span></div>
+      <div class="pp-row" style="padding:6px 0;border-bottom:none"><span>Duration</span><span style="font-weight:700;color:var(--blue);font-size:13px">${fmtDur(mins)}</span></div>
+      <div style="border-top:2px solid var(--border);margin:4px 0"></div>
+      <div class="pp-row" style="border:none;padding:6px 0"><span style="font-size:13px;font-weight:700">Amount Due</span><span style="color:var(--danger);font-weight:800;font-size:18px">₱${fee}</span></div>`;
+    acts.innerHTML=`<button class="btn btn-primary" style="margin-top:6px;padding:12px;font-size:14px" onclick="prefillCO('${s.plate}')"><i class="ti ti-logout"></i> Check Out & Collect</button>`;
   }else{
     body.innerHTML=`<div class="pp-row"><span>Status</span><span style="color:var(--warn);font-weight:600">Reserved</span></div><div class="pp-row"><span>Plate</span><span>${s.plate}</span></div>`;
     acts.innerHTML=`<button class="btn btn-danger" onclick="clearReserve('${id}')"><i class="ti ti-x"></i> Clear Reservation</button>`;
@@ -1139,6 +1280,15 @@ function checkIn(){
   document.getElementById('rc-in').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   document.getElementById('rc-date').textContent=now.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'});
   document.getElementById('rc-cashier').textContent=ac;
+  // Show upfront payment info for payg (Private Vehicle / PWD)
+  const ciRate=rates[type]||{};
+  const isPayg=ciRate.mode==='payg';
+  const isPwdCI=ciRate.mode==='pwd';
+  const showUpfront=isPayg||(isPwdCI);
+  const upfrontAmt=isPayg?(ciRate.firstRate||60):isPwdCI?Math.round(((rates['Private Vehicle']?.firstRate||60))*0.80):0;
+  document.getElementById('rc-paid-row').style.display=showUpfront?'':'none';
+  document.getElementById('rc-valid-row').style.display=showUpfront?'':'none';
+  if(showUpfront){document.getElementById('rc-paid-amt').textContent='₱'+upfrontAmt+(isPwdCI?' (after 20% PWD disc.)':'');document.getElementById('rc-valid-note').textContent='1 hour';}
   document.getElementById('ci-receipt').classList.add('show');
   document.getElementById('ci-ticket').value='';
   document.getElementById('ci-plate').value='';
@@ -1173,6 +1323,15 @@ function checkOut(){
   document.getElementById('cor-type').textContent=s.type;
   document.getElementById('cor-dur').textContent=dur;
   document.getElementById('cor-breakdown').innerHTML=breakdown.split(' | ').join('<br>').split(' + ').join('<br>');
+  // PayG upfront / additional rows
+  const isPaygCO=(rates[s.type]||{}).mode==='payg';
+  document.getElementById('cor-upfront-row').style.display=isPaygCO?'':'none';
+  document.getElementById('cor-addl-row').style.display=(isPaygCO&&result.additionalFee>0)?'':'none';
+  document.getElementById('cor-noaddl-row').style.display=(isPaygCO&&result.additionalFee<=0)?'':'none';
+  if(isPaygCO){
+    document.getElementById('cor-upfront').textContent='₱'+(result.upfrontPaid||60);
+    if(result.additionalFee>0)document.getElementById('cor-addl').textContent='₱'+result.additionalFee;
+  }
   // PWD discount rows
   const isPwd=s.type==='PWD';
   document.getElementById('cor-reg-row').style.display=isPwd?'':'none';
@@ -1240,15 +1399,15 @@ function buildRatesEditor(){
       const disabledStyle=r.enabled===false?'opacity:0.5;':'';
       return`<div class="rate-section" style="${disabledStyle}">
         <div class="rate-type-hdr"><span>🚗 ${t}</span><div style="display:flex;gap:6px;align-items:center"><span style="font-size:10px;color:var(--muted)">Pay-As-You-Park</span><label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:600;color:${r.enabled===false?'var(--danger)':'#2d7a1f'}"><input type="checkbox" ${r.enabled===false?'':'checked'} onchange="toggleRateEnabled('${key}')" style="cursor:pointer">${r.enabled===false?'Disabled':'Enabled'}</label></div></div>
-        <div class="rate-note">First entry fee covers first 30 min. Each additional 30 min or fraction is charged separately.</div>
+        <div class="rate-note">Pay ₱${r.firstRate||60} on entry — invoice & receipt issued, good for 1 hour. No extra charge if duration ≤ 1h. Every 30 min (or fraction) beyond 1h is charged separately.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Entry rate (₱)</label>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Entry rate / 1h (₱)</label>
           <input type="number" id="payg-first-${key}" value="${r.firstRate||60}" min="0" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;font-weight:700"></div>
-          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Per 30 min (₱)</label>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Per 30 min excess (₱)</label>
           <input type="number" id="payg-succ-${key}" value="${r.succRate||30}" min="0" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;font-weight:700"></div>
         </div>
         <div style="margin-top:6px;padding:6px 8px;background:#e8f4fd;border-radius:6px;font-size:10px;color:var(--blue)">
-          <b>Example:</b> 1h 10min = Entry ₱${r.firstRate||60} + 2×30min ₱${(r.succRate||30)*2} = <b>₱${(r.firstRate||60)+(r.succRate||30)*2}</b> · VAT included in rate
+          <b>Example:</b> 1h 10min = ₱${r.firstRate||60} (entry) + 1×30min ₱${r.succRate||30} = <b>₱${(r.firstRate||60)+(r.succRate||30)}</b> · 45min = ₱${r.firstRate||60} only · VAT included
         </div>
       </div>`;
     }
@@ -1928,6 +2087,110 @@ setInterval(tickClock,1000);
 updateOnDutyWidget();
 setInterval(updateOnDutyWidget,60000);
 
+
+// ══════════════════════════════════════════════════════
+// AUDIT
+// ══════════════════════════════════════════════════════
+const AUDIT_PASS = '@dm!n';
+
+function openAuditModal(){
+  const m=document.getElementById('audit-modal');
+  m.style.display='flex';
+  // Reset to gate
+  document.getElementById('audit-gate').style.display='';
+  document.getElementById('audit-content').style.display='none';
+  document.getElementById('audit-err').style.display='none';
+  document.getElementById('audit-pass').value='';
+  setTimeout(()=>document.getElementById('audit-pass').focus(),100);
+}
+
+function closeAuditModal(){
+  document.getElementById('audit-modal').style.display='none';
+}
+
+function submitAuditPass(){
+  const p=document.getElementById('audit-pass').value;
+  if(p!==AUDIT_PASS){
+    document.getElementById('audit-err').style.display='block';
+    document.getElementById('audit-pass').value='';
+    document.getElementById('audit-pass').focus();
+    return;
+  }
+  document.getElementById('audit-gate').style.display='none';
+  document.getElementById('audit-content').style.display='';
+  renderAuditContent();
+}
+
+function renderAuditContent(){
+  // Stats
+  const total=txLog.reduce((a,b)=>a+b.fee,0);
+  const byType={};
+  txLog.forEach(e=>{ byType[e.type]=(byType[e.type]||0)+e.fee; });
+  const allOcc=[];
+  areas.forEach(a=>a.slots.forEach(s=>{ if(s.status==='occ') allOcc.push({s,a}); }));
+  const estPending=allOcc.reduce((acc,{s})=>{ const m=Math.floor((Date.now()-s.since)/60000); return acc+computeFee(s.type,m).fee; },0);
+
+  const statsEl=document.getElementById('audit-stats');
+  statsEl.innerHTML=`
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:20px;font-weight:800;color:#2d7a1f">₱${total}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">Collected</div>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:20px;font-weight:800;color:var(--accent)">₱${estPending}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">Est. Pending</div>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:20px;font-weight:800;color:var(--blue)">${txLog.length}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">Check-outs</div>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:20px;font-weight:800;color:var(--warn)">${allOcc.length}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">Still Parked</div>
+    </div>
+    ${Object.keys(byType).length?`<div style="grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">By Vehicle Type</div>
+      ${Object.entries(byType).map(([t,f])=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">${t}</span><span style="font-weight:700;color:var(--accent)">₱${f}</span></div>`).join('')}
+    </div>`:''}
+  `;
+
+  // Log list
+  const logEl=document.getElementById('audit-log-list');
+  if(!txLog.length){
+    logEl.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:12px">No transactions yet.</div>';
+  } else {
+    logEl.innerHTML=txLog.map(e=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+        <div style="width:30px;height:30px;border-radius:6px;background:#e6f1fb;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--blue);flex-shrink:0">${e.slot}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600">${e.plate}</div>
+          <div style="font-size:10px;color:var(--muted)">${e.type} · ${e.dur}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:12px;font-weight:700;color:#2d7a1f">₱${e.fee}</div>
+          <div style="font-size:10px;color:var(--muted)">${e.time}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  document.getElementById('audit-time').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+// ── Cashier End Duty / Logout ────────────────────────
+function cashierLogout(){
+  if(!confirm('End duty and clear session ticket counters?')) return;
+  dutyTickets={pv:'',sr:'',pvCount:0,srCount:0,cashierOnDuty:''};
+  updateDutyBanner();
+  // Clear check-in/out form fields
+  document.getElementById('ci-ticket').value='';
+  document.getElementById('ci-plate').value='';
+  document.getElementById('co-plate').value='';
+  document.getElementById('co-info').innerHTML='';
+  document.getElementById('ci-receipt').classList.remove('show');
+  document.getElementById('co-receipt').classList.remove('show');
+  toast('Duty ended. Ticket series cleared.');
+}
+
 // ══════════════════════════════════════════════════════
 // EXPOSE GLOBALS FOR FIREBASE MODULE
 // ══════════════════════════════════════════════════════
@@ -1950,9 +2213,33 @@ window.refreshSlotDropdown = refreshSlotDropdown;
 window.renderAdmin      = renderAdmin;
 window.renderLog        = renderLog;
 window.updateOnDutyWidget = updateOnDutyWidget;
-
-// Start Firebase listeners now that all globals are ready
-if(typeof window._fbStartListeners==='function') window._fbStartListeners();
 </script>
+
+<!-- Audit Modal -->
+<div id="audit-modal" style="display:none;position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;color:var(--navy)"><i class="ti ti-report-money" style="font-size:18px;color:var(--accent)"></i> Audit — Sales Preview</div>
+      <span onclick="closeAuditModal()" style="cursor:pointer;font-size:20px;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg)">×</span>
+    </div>
+    <!-- Password gate -->
+    <div id="audit-gate">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Enter audit password to view sales summary.</div>
+      <div class="field"><label>Audit Password</label><input id="audit-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitAuditPass()"></div>
+      <div id="audit-err" style="font-size:11px;color:var(--danger);margin-bottom:6px;display:none">Incorrect password.</div>
+      <button class="btn btn-primary" onclick="submitAuditPass()"><i class="ti ti-lock-open"></i> Unlock</button>
+    </div>
+    <!-- Sales content (shown after unlock) -->
+    <div id="audit-content" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px" id="audit-stats"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Transactions This Session</div>
+      <div id="audit-log-list"></div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:10px;color:var(--muted)">Generated: <span id="audit-time"></span></div>
+        <button class="btn btn-sm btn-accent" onclick="closeAuditModal()"><i class="ti ti-check"></i> Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
