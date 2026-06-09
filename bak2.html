@@ -1,0 +1,2036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1622">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ACI Parking">
+<title>ACI Street Parking</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --navy:#0b1622;--accent:#1d9e75;--blue:#185fa5;--warn:#ba7517;--danger:#a32d2d;
+  --bg:#f5f6f8;--card:#ffffff;--border:#e2e5ea;--text:#1a1d23;--muted:#6b7280;
+  --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#0f141c;--card:#1a2332;--border:#2a3545;--text:#e8edf5;--muted:#8899aa}
+}
+html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text)}
+.shell{max-width:430px;margin:0 auto;height:100%;display:flex;flex-direction:column;background:var(--bg)}
+.topbar{background:var(--navy);color:#fff;padding:calc(8px + var(--safe-top)) 12px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:62px}
+.topbar-left{display:flex;flex-direction:column;justify-content:center;z-index:1}
+.topbar-center{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;padding-top:var(--safe-top)}
+.clock-time{font-size:26px;font-weight:900;color:#fff;letter-spacing:1.5px;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+.clock-date{font-size:8.5px;color:#9fe1cb;letter-spacing:.8px;margin-top:2px;text-transform:uppercase}
+.app-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px;letter-spacing:-.3px}
+.app-title .aci{color:#9fe1cb}
+.sub{font-size:10px;color:#9fe1cb;margin-top:1px}
+.role-btn{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.3);color:#fff;background:transparent;cursor:pointer;transition:background .2s}
+.role-btn.admin{background:var(--accent)}.role-btn.cashier{background:var(--blue)}
+.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:10px 10px;font-size:11px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:4px;transition:color .15s}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.screens{flex:1;overflow:hidden;position:relative}
+.screen{display:none;position:absolute;inset:0;overflow-y:auto;padding:10px;padding-bottom:calc(10px + var(--safe-bot))}
+.screen.active{display:block}
+.card{background:var(--card);border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid var(--border)}
+.card h4{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.scard{background:var(--card);border-radius:8px;padding:8px 6px;text-align:center;border:1px solid var(--border)}
+.scard .val{font-size:20px;font-weight:700}.scard .lbl{font-size:9px;color:var(--muted);margin-top:1px}
+.green{color:#2d7a1f}.red{color:var(--danger)}.amber{color:var(--warn)}.blue{color:var(--blue)}
+
+/* MAP */
+.map-wrap{background:var(--card);border-radius:10px;border:1px solid var(--border);overflow:hidden;margin-bottom:8px}
+.map-header{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--bg)}
+.map-view-toggle{display:flex;gap:3px;flex-shrink:0}
+.map-view-btn{font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer}
+.map-view-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.area-tabs{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.area-tabs::-webkit-scrollbar{display:none}
+.area-tab{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.area-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.lot-container{padding:7px 6px;display:flex;flex-direction:column;gap:0}
+.lot-row-wrap{display:flex;align-items:stretch;gap:6px;margin-bottom:4px}
+.lot-row-label{writing-mode:vertical-lr;transform:rotate(180deg);font-size:8px;font-weight:700;color:#fff;background:var(--navy);padding:4px 3px;border-radius:4px;display:flex;align-items:center;justify-content:center;letter-spacing:.5px;flex-shrink:0;min-height:30px}
+.lot-row-label.side-b{background:var(--blue)}
+.lot-grid{display:grid;gap:3px;flex:1}
+.road-strip{background:linear-gradient(90deg,#888,#aaa 30%,#888);height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;letter-spacing:1px;margin:3px 0;position:relative;overflow:hidden;flex-shrink:0}
+.road-strip::before{content:'';position:absolute;top:50%;left:0;right:0;height:2px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,#ffe66d 0,#ffe66d 18px,transparent 18px,transparent 32px)}
+.slot-cell{aspect-ratio:1/1.55;border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid transparent;transition:transform .1s;position:relative;overflow:hidden;min-width:0}
+.slot-cell.free{background:#eaf3de;border-color:#6aa82a}
+.slot-cell.occ{background:#fcebeb;border-color:#e24b4a}
+.slot-cell.reserved{background:#faeeda;border-color:#ba7517}
+.slot-cell:active{transform:scale(.92)}
+.slot-cell.selected{outline:2px solid var(--blue);outline-offset:1px;box-shadow:0 0 0 3px rgba(24,95,165,.2);z-index:2}
+.slot-cell .sc-id{font-size:6px;font-weight:700;color:#2c2c2a;line-height:1}
+.slot-cell .sc-plate{font-size:5px;margin-top:1px;text-align:center;line-height:1.2;word-break:break-all;max-width:100%;padding:0 1px}
+.slot-cell.free .sc-plate{color:#3b6d11}.slot-cell.occ .sc-plate{color:var(--danger)}.slot-cell.reserved .sc-plate{color:var(--warn)}
+.slot-cell .sc-icon{font-size:9px;opacity:.7;line-height:1}.slot-cell.occ .sc-icon{opacity:1}
+.slot-list-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.slot-list-item:last-child{border:none}.slot-list-item:active{opacity:.7}
+.sli-badge{width:36px;height:36px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sli-badge.free{background:#eaf3de;color:#3b6d11}.sli-badge.occ{background:#fcebeb;color:var(--danger)}.sli-badge.reserved{background:#faeeda;color:var(--warn)}
+.sli-info{flex:1;min-width:0}.sli-id{font-size:12px;font-weight:600}.sli-meta{font-size:10px;color:var(--muted);margin-top:1px}
+.sli-right{text-align:right;flex-shrink:0}.sli-fee{color:var(--danger);font-size:12px;font-weight:700}.sli-status{font-size:10px;color:var(--muted)}
+.legend{display:flex;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)}
+.leg-dot{width:9px;height:9px;border-radius:2px}
+
+/* POPUP */
+.slot-popup{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;display:none;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.slot-popup.show{display:block}
+.pp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pp-head span{font-size:13px;font-weight:600}
+.pp-close{cursor:pointer;font-size:20px;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg)}
+.pp-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)}
+.pp-row:last-of-type{border:none}.pp-row span:first-child{color:var(--muted)}
+
+/* FORM */
+.field{margin-bottom:8px}
+.field label{font-size:11px;font-weight:500;color:var(--muted);display:block;margin-bottom:3px}
+.field input,.field select,.field textarea{width:100%;padding:8px 10px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue)}
+.btn{padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);width:100%;margin-top:6px;transition:opacity .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{transform:scale(.97);opacity:.85}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-accent{background:#e1f5ee;color:#0f6e56;border-color:#5dcaa5}
+.btn-danger{background:#fcebeb;color:var(--danger);border-color:#f09595}
+.btn-warn{background:#faeeda;color:#7a3f00;border-color:#e8b96a}
+.btn-blue{background:#e6f1fb;color:var(--blue);border-color:#92bde8}
+.btn-sm{width:auto;padding:4px 10px;font-size:11px;margin:0}
+.receipt{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:8px;display:none}
+.receipt.show{display:block}
+.r-head{text-align:center;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)}
+.r-title{font-size:13px;font-weight:700}.r-sub{font-size:10px;color:var(--muted)}
+.r-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0}
+.r-row span:first-child{color:var(--muted)}
+.r-total{font-weight:700;font-size:14px;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;display:flex;justify-content:space-between}
+.badge{display:inline-block;font-size:10px;padding:2px 9px;border-radius:20px;font-weight:600}
+.badge-paid{background:#eaf3de;color:#2d7a1f}.badge-active{background:#e6f1fb;color:var(--blue)}
+.log-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.log-badge{min-width:34px;height:34px;border-radius:8px;background:#e6f1fb;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--blue)}
+.log-info{flex:1;min-width:0}.log-plate{font-size:13px;font-weight:600}.log-meta{font-size:10px;color:var(--muted);margin-top:2px}
+.log-right{text-align:right;flex-shrink:0}.log-amt{font-size:13px;font-weight:700;color:#2d7a1f}.log-time{font-size:10px;color:var(--muted)}
+.cashier-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.cashier-row:last-child{border:none}
+.ca-avatar{width:34px;height:34px;border-radius:50%;background:#e6f1fb;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue);flex-shrink:0}
+.ca-info{flex:1;min-width:0}.ca-name{font-size:13px;font-weight:600}.ca-meta{font-size:10px;color:var(--muted);margin-top:1px}
+.ca-actions{display:flex;gap:4px;flex-shrink:0}
+.rate-section{background:var(--bg);border-radius:8px;padding:8px;border:1px solid var(--border);margin-bottom:8px}
+.rate-type-hdr{font-size:12px;font-weight:600;background:var(--bg);padding:6px 10px;border-radius:7px;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+.hour-row{display:flex;gap:5px;align-items:center;margin-bottom:4px;background:var(--card);border-radius:6px;padding:5px 7px;border:1px solid var(--border)}
+.hour-row .hr-lbl{font-size:10px;color:var(--muted);min-width:40px}
+.hour-row input{flex:1;padding:4px 6px;font-size:11px;border-radius:5px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.hour-row input:focus{outline:none;border-color:var(--blue)}
+.del-hour-btn{font-size:10px;color:var(--danger);cursor:pointer;padding:3px 7px;border:1px solid #f09595;border-radius:5px;background:#fcebeb;flex-shrink:0}
+.rate-note{font-size:10px;color:var(--muted);margin-bottom:6px;font-style:italic}
+.rate-delete-type{font-size:10px;color:var(--danger);cursor:pointer;padding:2px 7px;border:1px solid #f09595;border-radius:5px;background:#fcebeb}
+.add-type-row{display:flex;gap:6px;align-items:flex-end;margin-bottom:8px}
+.add-type-row input{flex:1;padding:7px 9px;font-size:12px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.admin-badge{display:flex;align-items:center;gap:7px;background:#e1f5ee;border-radius:8px;padding:6px 10px;margin-bottom:10px;font-size:11px;color:#0f6e56;font-weight:500}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.sum-card{background:var(--card);border-radius:8px;padding:8px 10px;border:1px solid var(--border)}
+.sum-val{font-size:17px;font-weight:700}.sum-lbl{font-size:10px;color:var(--muted);margin-top:2px}
+.admin-slot-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px}
+.admin-slot-row:last-child{border:none}.asr-slot{font-weight:600}.asr-meta{color:var(--muted);font-size:10px;margin-top:1px}.asr-fee{font-weight:700;color:var(--accent)}
+.toast{position:fixed;bottom:calc(20px + var(--safe-bot));left:50%;transform:translateX(-50%);background:#1a2332;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:500;z-index:9999;opacity:0;transition:opacity .25s;white-space:nowrap;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.toast.show{opacity:1}
+.install-bar{background:var(--navy);color:#fff;padding:8px 14px;display:none;align-items:center;justify-content:space-between;font-size:11px;flex-shrink:0}
+.install-bar.show{display:flex}
+.install-bar button{font-size:11px;padding:4px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.4);color:#fff;background:var(--accent);cursor:pointer}
+.install-bar .ib-close{background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,.6);font-size:16px;padding:0;margin-left:6px}
+
+/* SETTINGS SPECIFIC */
+.settings-section{margin-bottom:12px}
+.settings-section-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;padding:0 2px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;cursor:pointer}
+.settings-row:active{opacity:.7}
+.settings-row-info{display:flex;align-items:center;gap:10px}
+.settings-row-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.settings-row-text .sr-title{font-size:13px;font-weight:600}
+.settings-row-text .sr-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.settings-row-arrow{color:var(--muted);font-size:14px}
+.area-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.area-item:last-child{border:none}
+.area-item-name{flex:1;font-size:13px;font-weight:600}
+.area-item-meta{font-size:10px;color:var(--muted)}
+.slot-mgr-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.slot-mgr-row:last-child{border:none}
+.slot-mgr-id{font-weight:700;min-width:38px}
+.slot-mgr-side{flex:1;color:var(--muted);font-size:11px}
+
+/* SYNC GUIDE */
+.sync-step{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.sync-step:last-child{border:none}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body .step-title{font-size:12px;font-weight:600;margin-bottom:3px}
+.step-body .step-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.step-body .step-link{font-size:11px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:4px}
+.sync-method-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px}
+.sync-method-card .smc-title{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.sync-method-card .smc-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700}
+.smc-badge.free{background:#eaf3de;color:#2d7a1f}
+.smc-badge.easy{background:#e6f1fb;color:var(--blue)}
+.sync-method-card .smc-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.qr-box{background:var(--navy);border-radius:10px;padding:16px;text-align:center;margin:8px 0}
+.qr-box .qr-url{font-size:11px;color:#9fe1cb;word-break:break-all;margin-top:8px}
+.qr-placeholder{width:100px;height:100px;background:#fff;border-radius:6px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:10px;color:#333;padding:8px;text-align:center}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- Truncate Data Modal -->
+<div id="truncate-modal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:320px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;color:var(--danger)"><i class="ti ti-trash" style="font-size:18px"></i> Truncate All Data</div>
+      <span onclick="closeTruncateModal()" style="cursor:pointer;font-size:20px;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg);">×</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;padding:8px;background:#fcebeb;border-radius:6px;border-left:3px solid var(--danger)">⚠️ This will clear all transactions, active sessions, and log entries. Slots reset to free. Cannot be undone.</div>
+    <div class="field"><label>Enter Truncate Password</label><input id="trunc-pass" type="password" placeholder="Password to confirm" onkeydown="if(event.key==='Enter')submitTruncate()"></div>
+    <div id="trunc-err" style="font-size:11px;color:var(--danger);margin-bottom:6px;display:none;">Incorrect password.</div>
+    <button class="btn btn-danger" onclick="submitTruncate()"><i class="ti ti-trash"></i> Confirm Truncate</button>
+  </div>
+</div>
+
+<!-- Duty Start Modal -->
+<div id="duty-modal" style="display:none;position:fixed;inset:0;z-index:9050;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <i class="ti ti-ticket" style="font-size:20px;color:var(--accent)"></i>
+      <div style="font-size:15px;font-weight:700">Start of Duty</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Enter your starting ticket series numbers for this shift. These will auto-fill and increment on each check-in.</div>
+    <div class="field">
+      <label>🚗 Private Vehicle — Starting Ticket No.</label>
+      <input id="duty-pv" placeholder="e.g. 0001 or PV-001" style="font-family:monospace;font-size:14px;letter-spacing:.5px" autocapitalize="characters">
+    </div>
+    <div class="field">
+      <label>👴 QC Senior — Starting Ticket No.</label>
+      <input id="duty-sr" placeholder="e.g. SR-001" style="font-family:monospace;font-size:14px;letter-spacing:.5px" autocapitalize="characters">
+    </div>
+    <div class="field">
+      <label>Cashier Name</label>
+      <select id="duty-staff-pick" onchange="onDutyStaffPick()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;margin-bottom:4px">
+        <option value="">— Select from staff list —</option>
+      </select>
+      <input id="duty-name" placeholder="Or type name manually" autocapitalize="words">
+    </div>
+    <button class="btn btn-primary" onclick="startDuty()"><i class="ti ti-player-play"></i> Start Duty</button>
+    <button class="btn" style="margin-top:4px;opacity:.6" onclick="closeDutyModal()">Skip for now</button>
+  </div>
+</div>
+<div id="admin-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:320px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;"><i class="ti ti-shield-lock" style="font-size:18px;color:var(--accent);"></i> Admin Login</div>
+      <span onclick="closeAdminLogin()" style="cursor:pointer;font-size:20px;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg);">×</span>
+    </div>
+    <div class="field"><label>Username</label><input id="adm-user" placeholder="admin" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('adm-pass').focus()"></div>
+    <div class="field"><label>Password</label><input id="adm-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAdminLogin()"></div>
+    <div id="adm-err" style="font-size:11px;color:var(--danger);margin-bottom:6px;display:none;">Incorrect username or password.</div>
+    <button class="btn btn-primary" onclick="submitAdminLogin()"><i class="ti ti-login"></i> Login as Admin</button>
+  </div>
+</div>
+<div class="shell">
+  <div class="install-bar" id="install-bar">
+    <span>📲 Install ACI Parking on your device</span>
+    <div style="display:flex;align-items:center;gap:4px">
+      <button onclick="installPWA()">Install</button>
+      <button class="ib-close" onclick="document.getElementById('install-bar').classList.remove('show')">×</button>
+    </div>
+  </div>
+  <div class="topbar" style="position:relative">
+    <div class="topbar-left">
+      <div class="app-title" style="font-size:13px"><i class="ti ti-parking"></i> <span class="aci" id="hdr-biz-name">ACI Street Parking</span></div>
+      <div class="sub" id="top-sub" style="font-size:9px;opacity:.8">Loading…</div>
+    </div>
+    <div class="topbar-center">
+      <div class="clock-time" id="clock-time">00:00:00</div>
+      <div class="clock-date" id="clock-date"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+      <button class="role-btn cashier" id="role-btn" onclick="openAdminLogin()">Cashier</button>
+      <div style="display:flex;align-items:center;gap:4px;font-size:9px;color:#9fe1cb">
+        <div id="fb-dot" style="width:7px;height:7px;border-radius:50%;background:#f5a623;flex-shrink:0;transition:background .4s"></div>
+        <span id="fb-lbl">Connecting…</span>
+      </div>
+    </div>
+  </div>
+  <div class="tabs" id="tabs-bar">
+    <div class="tab active" onclick="sw('floorplan',this)"><i class="ti ti-layout-grid"></i> Map</div>
+    <div class="tab" onclick="sw('cashier',this)"><i class="ti ti-receipt"></i> Cashier</div>
+    <div class="tab" onclick="sw('log',this)"><i class="ti ti-list"></i> Log</div>
+    <div class="tab" style="display:none" id="tab-rates-btn" onclick="sw('rates',this)"><i class="ti ti-currency-peso"></i> Rates</div>
+    <div class="tab" style="display:none" id="tab-cashiers-btn" onclick="sw('cashiers',this)"><i class="ti ti-users"></i> Staff</div>
+    <div class="tab" style="display:none" id="tab-admin-btn" onclick="sw('admin',this)"><i class="ti ti-shield"></i> Admin</div>
+    <div class="tab" style="display:none" id="tab-settings-btn" onclick="sw('settings',this)"><i class="ti ti-settings"></i> Settings</div>
+  </div>
+
+  <div class="screens">
+
+    <!-- MAP / FLOORPLAN -->
+    <div class="screen active" id="tab-floorplan">
+      <div class="stats-row">
+        <div class="scard"><div class="val green" id="st-free">0</div><div class="lbl">Free</div></div>
+        <div class="scard"><div class="val red" id="st-occ">0</div><div class="lbl">Taken</div></div>
+        <div class="scard"><div class="val amber" id="st-res">0</div><div class="lbl">Reserved</div></div>
+      </div>
+      <div class="map-wrap">
+        <div class="map-header">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px"><i class="ti ti-map-2"></i> <span id="map-area-label">Area</span></div>
+            <div class="legend" style="margin:4px 0 0">
+              <div class="leg"><div class="leg-dot" style="background:#c0dd97"></div>Free</div>
+              <div class="leg"><div class="leg-dot" style="background:#f7c1c1"></div>Taken</div>
+              <div class="leg"><div class="leg-dot" style="background:#fac775"></div>Reserved</div>
+            </div>
+          </div>
+          <div class="map-view-toggle">
+            <button class="map-view-btn active" id="vbtn-map" onclick="setMapView('map',this)"><i class="ti ti-layout-grid"></i></button>
+            <button class="map-view-btn" id="vbtn-list" onclick="setMapView('list',this)"><i class="ti ti-list"></i></button>
+          </div>
+        </div>
+        <!-- Area tabs -->
+        <div class="area-tabs" id="area-tabs"></div>
+        <!-- Grid map -->
+        <div id="map-view" class="lot-container"></div>
+        <!-- List view -->
+        <div id="list-view" style="display:none;padding:8px 10px">
+          <div style="display:flex;gap:5px;margin-bottom:8px">
+            <button class="map-view-btn active" id="lf-all" onclick="filterList('all',this)" style="flex:1">All</button>
+            <button class="map-view-btn" id="lf-occ" onclick="filterList('occ',this)" style="flex:1;color:var(--danger)">Taken</button>
+            <button class="map-view-btn" id="lf-free" onclick="filterList('free',this)" style="flex:1;color:#2d7a1f">Free</button>
+            <button class="map-view-btn" id="lf-res" onclick="filterList('reserved',this)" style="flex:1;color:var(--warn)">Resv</button>
+          </div>
+          <div id="slot-list-items"></div>
+        </div>
+      </div>
+      <div class="slot-popup" id="slot-popup">
+        <div class="pp-head"><span id="pp-title">Slot</span><span class="pp-close" onclick="closePopup()">×</span></div>
+        <div id="pp-body" style="margin-bottom:8px"></div>
+        <div id="pp-acts"></div>
+      </div>
+    </div>
+
+    <!-- CASHIER -->
+    <div class="screen" id="tab-cashier">
+      <!-- On Duty Now widget -->
+      <div id="on-duty-widget" style="margin-bottom:8px;border-radius:10px;overflow:hidden;border:1px solid var(--border)">
+        <div style="background:var(--navy);padding:6px 12px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:10px;font-weight:800;color:#fff;letter-spacing:.6px;display:flex;align-items:center;gap:5px"><i class="ti ti-users" style="font-size:12px"></i> ON DUTY NOW</div>
+          <div id="on-duty-time" style="font-size:10px;color:#9bb8d4;font-weight:600"></div>
+        </div>
+        <div id="on-duty-list" style="background:var(--card);padding:6px 10px;min-height:32px"></div>
+      </div>
+      <div id="duty-banner" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0b3d2e,#1d9e75);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer" onclick="openDutyModal()">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#fff;display:flex;align-items:center;gap:5px"><i class="ti ti-ticket" style="font-size:14px"></i> <span id="duty-status-text">Set Starting Ticket Series</span></div>
+          <div style="font-size:10px;color:#9fe1cb;margin-top:2px" id="duty-series-display">Tap to configure before duty starts</div>
+        </div>
+        <i class="ti ti-chevron-right" style="color:#9fe1cb;font-size:16px"></i>
+      </div>
+      <div class="card">
+        <h4><i class="ti ti-login"></i> Check In</h4>
+        <div class="field"><label>Ticket Series No.</label><input id="ci-ticket" placeholder="e.g. 0001 or ACI-2024-001" autocapitalize="characters" style="font-family:monospace;letter-spacing:.5px"></div>
+        <div class="field"><label>Plate Number</label><input id="ci-plate" placeholder="ABC 1234" style="text-transform:uppercase" autocapitalize="characters"></div>
+        <div class="field"><label>Vehicle Type</label><select id="ci-type"></select></div>
+        <div class="field"><label>Assign Slot</label><select id="ci-slot"></select></div>
+        <button class="btn btn-primary" onclick="checkIn()"><i class="ti ti-check"></i> Check In & Issue Ticket</button>
+      </div>
+      <div class="receipt" id="ci-receipt">
+        <div class="r-head"><div class="r-title">ACI Street Parking</div><div class="r-sub" id="rc-date"></div></div>
+        <div class="r-row"><span>Ticket No.</span><span id="rc-ticket" style="font-family:monospace;font-weight:700;color:var(--blue)"></span></div>
+        <div class="r-row"><span>Slot</span><span id="rc-slot"></span></div>
+        <div class="r-row"><span>Plate</span><span id="rc-plate"></span></div>
+        <div class="r-row"><span>Type</span><span id="rc-type"></span></div>
+        <div class="r-row"><span>Time In</span><span id="rc-in"></span></div>
+        <div class="r-row"><span>Cashier</span><span id="rc-cashier"></span></div>
+        <div class="r-row"><span>Status</span><span class="badge badge-active">Active</span></div>
+      </div>
+      <div class="card" style="margin-top:8px">
+        <h4><i class="ti ti-logout"></i> Check Out</h4>
+        <div class="field"><label>Plate Number</label><input id="co-plate" placeholder="Search plate…" style="text-transform:uppercase" autocapitalize="characters" oninput="lookupPlate(this.value)"></div>
+        <div id="co-info" style="font-size:11px;color:var(--muted);min-height:14px;margin-bottom:6px"></div>
+        <button class="btn btn-primary" onclick="checkOut()"><i class="ti ti-currency-peso"></i> Compute & Checkout</button>
+      </div>
+      <div class="receipt" id="co-receipt">
+        <div class="r-head"><div class="r-title">Payment Receipt</div></div>
+        <div class="r-row"><span>Slot</span><span id="cor-slot"></span></div>
+        <div class="r-row"><span>Plate</span><span id="cor-plate"></span></div>
+        <div class="r-row"><span>Type</span><span id="cor-type"></span></div>
+        <div class="r-row"><span>Duration</span><span id="cor-dur"></span></div>
+        <div class="r-row"><span>Breakdown</span><span id="cor-breakdown" style="text-align:right;max-width:55%;font-size:10px;line-height:1.5"></span></div>
+        <div class="r-row" id="cor-reg-row" style="display:none"><span>Regular Rate</span><span id="cor-regular" style="text-decoration:line-through;color:var(--muted)"></span></div>
+        <div class="r-row" id="cor-disc-row" style="display:none"><span>PWD Discount (20%)</span><span id="cor-discount" style="color:var(--accent);font-weight:700"></span></div>
+        <div class="r-row" id="cor-vat-row" style="display:none"><span>VAT (12%) incl.</span><span id="cor-vat" style="color:var(--muted)"></span></div>
+        <div class="r-total"><span>Total</span><span id="cor-total"></span></div>
+        <div style="text-align:center;margin-top:8px"><span class="badge badge-paid">Paid ✓</span></div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="screen" id="tab-log">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px" id="log-summary">No transactions yet.</div>
+      <div id="log-list"></div>
+    </div>
+
+    <!-- RATES -->
+    <div class="screen" id="tab-rates">
+      <div class="card">
+        <h4><i class="ti ti-edit"></i> Edit Rates per Vehicle Type
+          <button class="btn-sm btn btn-accent" onclick="saveRates()">Save All</button>
+        </h4>
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Add Parker Type</div>
+          <div class="add-type-row">
+            <input id="new-type-name" placeholder="e.g. Trike / E-bike">
+            <button class="btn btn-accent btn-sm" onclick="addParkerType()" style="white-space:nowrap">+ Add</button>
+          </div>
+        </div>
+        <div id="rates-editor"></div>
+      </div>
+      <div id="rates-saved" style="font-size:11px;color:#2d7a1f;margin-bottom:6px;display:none;padding:0 2px;font-weight:500">✓ Rates saved</div>
+    </div>
+
+    <!-- STAFF -->
+    <div class="screen" id="tab-cashiers">
+      <div class="card">
+        <h4><i class="ti ti-user-plus"></i> Add Cashier / Staff</h4>
+        <div class="field"><label>Full Name</label><input id="ca-name" placeholder="e.g. Maria Santos"></div>
+        <div class="field"><label>Employee ID</label><input id="ca-id" placeholder="e.g. ACI-001"></div>
+        <div class="field"><label>Shift</label>
+          <input id="ca-shift" placeholder="e.g. Shift A (6AM–2PM)" list="shift-suggestions">
+          <datalist id="shift-suggestions">
+            <option value="Shift A (6AM–2PM)">
+            <option value="Shift B (2PM–10PM)">
+            <option value="Shift C (10PM–6AM)">
+            <option value="Shift A (11AM–9PM)">
+            <option value="Shift B (10AM–10PM)">
+            <option value="Full Day">
+          </datalist>
+        </div>
+        <div class="field"><label>Role</label>
+          <select id="ca-role"><option>Cashier</option><option>Supervisor</option><option>Guard</option></select>
+        </div>
+        <button class="btn btn-primary" onclick="addCashier()"><i class="ti ti-plus"></i> Add Staff Member</button>
+      </div>
+      <div class="card">
+        <h4><i class="ti ti-users"></i> Staff List <span id="staff-count" style="font-weight:400;color:var(--muted)"></span></h4>
+        <div id="cashier-list"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="screen" id="tab-admin">
+      <div class="admin-badge"><div class="sync-dot"></div> Live — Owner &amp; Cashier synced</div>
+      <div class="sum-grid" id="admin-summary"></div>
+      <div class="card"><h4>Occupied Slots</h4><div id="adm-east"></div></div>
+      <div class="card"><h4>Reserved Slots</h4><div id="adm-res"></div></div>
+      <div class="card"><h4>Today's Transactions</h4><div id="adm-log"></div></div>
+      <div class="card" style="border-color:#f09595">
+        <h4 style="color:var(--danger)"><i class="ti ti-database-x"></i> Danger Zone</h4>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Permanently clear all active sessions, transaction log, and reset all slots to free.</p>
+        <button class="btn btn-danger" onclick="openTruncateModal()"><i class="ti ti-trash"></i> Truncate All Data…</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="screen" id="tab-settings">
+
+      <!-- Brand / Location name -->
+      <div class="settings-section">
+        <div class="settings-section-title">Business Info</div>
+        <div class="card" style="margin-bottom:4px">
+          <div class="field"><label>Business Name</label><input id="biz-name" value="ACI Street Parking"></div>
+          <div class="field"><label>Main Location / Street</label><input id="biz-loc" value="Roxas Avenue"></div>
+          <button class="btn btn-primary btn-sm" style="width:100%;margin-top:4px" onclick="saveBizInfo()"><i class="ti ti-check"></i> Save Info</button>
+        </div>
+      </div>
+
+      <!-- Areas / Locations -->
+      <div class="settings-section">
+        <div class="settings-section-title">Parking Areas / Locations</div>
+        <div class="card" style="margin-bottom:4px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Each area has its own map and slots. Cashiers pick which area they're working in.</div>
+          <div id="area-list"></div>
+          <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:6px">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px">Add New Area</div>
+            <div class="field"><label>Area Name</label><input id="new-area-name" placeholder="e.g. Rizal Street, Lot B"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div class="field"><label>Side A Label</label><input id="new-area-sideA" placeholder="e.g. North, East"></div>
+              <div class="field"><label>Side A Slots</label><input id="new-area-slotsA" type="number" min="1" max="50" value="10"></div>
+              <div class="field"><label>Side B Label</label><input id="new-area-sideB" placeholder="e.g. South, West"></div>
+              <div class="field"><label>Side B Slots</label><input id="new-area-slotsB" type="number" min="0" max="50" value="10"></div>
+            </div>
+            <button class="btn btn-accent" onclick="addArea()"><i class="ti ti-map-pin"></i> Add Area</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slot Manager -->
+      <div class="settings-section">
+        <div class="settings-section-title">Slot Manager</div>
+        <div class="card" style="margin-bottom:4px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Add or remove individual slots per area. Only free slots can be removed.</div>
+          <div class="field"><label>Select Area</label><select id="slot-mgr-area" onchange="renderSlotManager()"></select></div>
+          <div id="slot-manager-view"></div>
+          <div style="display:flex;gap:6px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+            <div class="field" style="flex:1;margin:0"><label>Add Slot to Side</label>
+              <select id="slot-add-side"><option value="A">Side A</option><option value="B">Side B</option></select>
+            </div>
+            <button class="btn btn-accent btn-sm" style="align-self:flex-end" onclick="addSlotToArea()">+ Add Slot</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sync / Share Setup -->
+      <div class="settings-section">
+        <div class="settings-section-title"><i class="ti ti-wifi"></i> Cashier–Owner Sync Setup</div>
+        <div class="card" style="margin-bottom:4px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+            Choose the method that fits your setup. All are <strong>free</strong>. Pick one and follow the steps.
+          </div>
+
+          <!-- METHOD 1: Same WiFi -->
+          <div class="sync-method-card">
+            <div class="smc-title">
+              <i class="ti ti-wifi" style="color:var(--accent)"></i>
+              Method 1: Same WiFi — Instant Sync
+              <span class="smc-badge free">FREE</span>
+              <span class="smc-badge easy">RECOMMENDED</span>
+            </div>
+            <div class="smc-desc" style="margin-bottom:8px">When cashier and owner phones are on the <strong>same WiFi or hotspot</strong>, the app syncs automatically in real-time using the browser's built-in sync. No internet needed beyond the initial load.</div>
+            <div class="sync-step">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <div class="step-title">Host the app once (free)</div>
+                <div class="step-desc">Upload to GitHub Pages or Netlify (see Methods 2 &amp; 3 below). You only do this once — it gives you a permanent URL like <strong>https://yourname.github.io/aci-parking/</strong></div>
+              </div>
+            </div>
+            <div class="sync-step">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <div class="step-title">Both phones connect to same WiFi</div>
+                <div class="step-desc">Cashier's phone and owner's phone both connect to the <strong>same WiFi network</strong> (your shop's WiFi or owner's phone hotspot). This is the key requirement.</div>
+              </div>
+            </div>
+            <div class="sync-step">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <div class="step-title">Both open the same URL</div>
+                <div class="step-desc">Send the hosted URL via Messenger or SMS to the cashier. Both open it in <strong>Chrome</strong>. Both tap browser menu → "Add to Home Screen" to install as app.</div>
+              </div>
+            </div>
+            <div class="sync-step" style="border:none">
+              <div class="step-num">4</div>
+              <div class="step-body">
+                <div class="step-title">Done — they sync automatically</div>
+                <div class="step-desc">When cashier checks in or out a vehicle, the owner's screen updates within <strong>1–2 seconds</strong> automatically — no manual refresh needed. This uses the browser's BroadcastChannel (works on same device) and localStorage sync across tabs. For cross-device sync on the same WiFi, the owner taps the refresh button on the Admin page to pull latest data.</div>
+              </div>
+            </div>
+            <div style="background:#e1f5ee;border-radius:7px;padding:8px 10px;font-size:11px;color:#0f6e56;margin-top:4px;line-height:1.5">
+              <strong>💡 Tip:</strong> For true instant cross-device sync, the owner can keep the Admin tab open and tap the <strong>Refresh</strong> button (or pull-to-refresh) any time. Cashier actions are saved instantly on their end.
+            </div>
+          </div>
+
+          <!-- METHOD 2: GitHub Pages -->
+          <div class="sync-method-card">
+            <div class="smc-title"><i class="ti ti-brand-github" style="color:#24292f"></i> Method 2: GitHub Pages <span class="smc-badge free">FREE</span></div>
+            <div class="smc-desc" style="margin-bottom:6px">Permanent HTTPS URL. Works worldwide. Best for long-term use. Takes about 10 minutes to set up once.</div>
+            <div class="sync-step">
+              <div class="step-num">1</div>
+              <div class="step-body"><div class="step-title">Create free GitHub account</div>
+              <div class="step-desc">Go to github.com → Sign Up. Takes 2 minutes.</div>
+              <a class="step-link" href="https://github.com/signup" target="_blank"><i class="ti ti-external-link"></i> github.com/signup</a></div>
+            </div>
+            <div class="sync-step">
+              <div class="step-num">2</div>
+              <div class="step-body"><div class="step-title">New repository</div>
+              <div class="step-desc">Click "+" → "New repository". Name: <strong>aci-parking</strong>. Visibility: <strong>Public</strong>. Click "Create repository".</div></div>
+            </div>
+            <div class="sync-step">
+              <div class="step-num">3</div>
+              <div class="step-body"><div class="step-title">Upload files</div>
+              <div class="step-desc">Click "uploading an existing file". Upload: <strong>index.html, manifest.json, sw.js, icon-192.png, icon-512.png</strong>. Click "Commit changes".</div></div>
+            </div>
+            <div class="sync-step">
+              <div class="step-num">4</div>
+              <div class="step-body"><div class="step-title">Enable Pages</div>
+              <div class="step-desc">Settings → Pages → Source: Deploy from branch → Branch: <strong>main</strong> → Save. URL: <strong>https://[username].github.io/aci-parking/</strong></div></div>
+            </div>
+            <div class="sync-step" style="border:none">
+              <div class="step-num">5</div>
+              <div class="step-body"><div class="step-title">Share URL with cashier</div>
+              <div class="step-desc">Send the link via chat. Both open it, both "Add to Home Screen". You're live.</div></div>
+            </div>
+          </div>
+
+          <!-- METHOD 3: Netlify Drop -->
+          <div class="sync-method-card">
+            <div class="smc-title"><i class="ti ti-bolt" style="color:#00c7b7"></i> Method 3: Netlify Drop <span class="smc-badge free">FREE</span> <span class="smc-badge easy">1 MINUTE</span></div>
+            <div class="smc-desc" style="margin-bottom:6px">Fastest way. Drag your folder, get a URL. No account needed to start.</div>
+            <div class="sync-step">
+              <div class="step-num">1</div>
+              <div class="step-body"><div class="step-title">Go to Netlify Drop on a computer</div>
+              <a class="step-link" href="https://app.netlify.com/drop" target="_blank"><i class="ti ti-external-link"></i> app.netlify.com/drop</a></div>
+            </div>
+            <div class="sync-step">
+              <div class="step-num">2</div>
+              <div class="step-body"><div class="step-title">Drag the entire <em>aci-parking</em> folder</div>
+              <div class="step-desc">Drop the whole folder (not just index.html) onto the Netlify page. Deploys in seconds. You get a URL like <strong>abc-xyz-123.netlify.app</strong></div></div>
+            </div>
+            <div class="sync-step" style="border:none">
+              <div class="step-num">3</div>
+              <div class="step-body"><div class="step-title">Share the URL</div>
+              <div class="step-desc">Send via Messenger or SMS. Both install as PWA. Free forever (sign up for a free account to keep the URL permanent and update files later).</div></div>
+            </div>
+          </div>
+
+          <div style="background:#faeeda;border-radius:8px;padding:10px;margin-top:4px;font-size:11px;color:#7a3f00;line-height:1.6">
+            <strong>⚠️ Important about data sync:</strong> This app stores data in the browser. For real-time cross-device sync (cashier action instantly updates owner screen), both devices need internet and a backend like Firebase. The methods above make the <em>app</em> available on both phones — for most small operations, owner taps Admin → refresh to see latest status from cashier. That's free and simple.
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Persistence / Export / Import -->
+      <div class="settings-section">
+        <div class="settings-section-title"><i class="ti ti-database"></i> Data &amp; Backup</div>
+        <div class="card" style="margin-bottom:4px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+            Settings, rates, staff, and areas are <strong>auto-saved</strong> to this browser. Use Export/Import to sync across devices or back up to GitHub.
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:#eaf3de;border-radius:7px">
+            <i class="ti ti-circle-check" style="color:#2d7a1f;font-size:16px"></i>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#2d7a1f">Auto-save active</div>
+              <div id="ls-last-saved" style="font-size:10px;color:#3b6d11">Loading…</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <button class="btn btn-accent" onclick="exportSettings()"><i class="ti ti-download"></i> Export JSON</button>
+            <label class="btn btn-sm" style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600">
+              <i class="ti ti-upload"></i> Import JSON
+              <input type="file" accept=".json" onchange="importSettings(event)" style="display:none">
+            </label>
+          </div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;padding:8px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+            <strong>GitHub/Netlify sync:</strong> Export → commit <code>settings.json</code> to your repo → on another device, Import that file. All rates, staff, areas, and business info will be restored. Active sessions &amp; transaction log are device-local only.
+          </div>
+          <button class="btn btn-sm" style="margin-top:8px;width:100%;border:1px solid #f09595;color:var(--danger);background:#fff8f8" onclick="clearLocalStorage()"><i class="ti ti-rotate-clockwise-2"></i> Clear Saved Data &amp; Reset</button>
+        </div>
+      </div>
+
+    </div><!-- /settings -->
+
+  </div><!-- /screens -->
+</div><!-- /shell -->
+
+<!-- ═══ FIREBASE SDK ═══ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update, push, remove, get }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ┌─────────────────────────────────────────────────────┐
+  // │  PASTE YOUR FIREBASE CONFIG HERE                    │
+  // │  (from Firebase Console → Project Settings → Web)  │
+  // └─────────────────────────────────────────────────────┘
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyBJo3FiaGEdyFXnAPsAQkV3wNDpJKQaF4k",
+    authDomain:        "streetparking-b4c4c.firebaseapp.com",
+    databaseURL:       "https://streetparking-b4c4c-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:         "streetparking-b4c4c",
+    storageBucket:     "streetparking-b4c4c.firebasestorage.app",
+    messagingSenderId: "335899183214",
+    appId:             "1:335899183214:web:04c1ee8f2679f8f7023e7f"
+  };
+
+  // ── Init ────────────────────────────────────────────────
+  const app = initializeApp(FIREBASE_CONFIG);
+  const db  = getDatabase(app);
+
+  // Expose helpers to global scope so the existing code can call them
+  window._fb = { db, ref, onValue, set, update, push, remove, get };
+  window._fbReady = true;
+
+  // ── Sync indicator helper ────────────────────────────────
+  function setSyncStatus(state){           // 'syncing' | 'ok' | 'err'
+    const dot = document.getElementById('fb-dot');
+    const lbl = document.getElementById('fb-lbl');
+    if(!dot||!lbl) return;
+    const map = {
+      syncing:['#f5a623','Syncing…'],
+      ok:     ['#1d9e75','Live ✓'],
+      err:    ['#a32d2d','Offline']
+    };
+    const [color,text] = map[state]||map.ok;
+    dot.style.background = color;
+    lbl.textContent = text;
+  }
+  window._setSyncStatus = setSyncStatus;
+
+  // ════════════════════════════════════════════════════════
+  // WHAT SYNCS TO FIREBASE
+  // ════════════════════════════════════════════════════════
+  //
+  //  /parking/
+  //    config/          ← settings, rates, vehicle types, cashiers, areas (Admin writes)
+  //    live/            ← slot statuses, active sessions (Cashier writes, all read)
+  //    txLog/           ← transaction log entries (Cashier writes, Admin reads)
+  //
+  // ════════════════════════════════════════════════════════
+
+  // ── SAVE CONFIG (Admin only: rates, staff, areas, biz info) ──
+  window.fbSaveConfig = function(){
+    if(!window._fbReady){ window.saveToLS(); return; }
+    setSyncStatus('syncing');
+    const payload = {
+      bizName:      window.bizName,
+      bizLoc:       window.bizLoc,
+      rates:        window.rates,
+      VEHICLE_TYPES:window.VEHICLE_TYPES,
+      cashiers:     window.cashiers,
+      areas: window.areas.map(a=>({
+        id:a.id, name:a.name,
+        sideALabel:a.sideALabel, sideBLabel:a.sideBLabel,
+        slots: a.slots.map(s=>({
+          id:s.id, area:s.area, side:s.side, num:s.num,
+          status:s.status, plate:s.plate||'', type:s.type||'',
+          since:s.since||null, ticket:s.ticket||null
+        }))
+      })),
+      currentAreaId:window.currentAreaId,
+      savedAt: Date.now()
+    };
+    set(ref(db,'parking/config'), payload)
+      .then(()=>{ setSyncStatus('ok'); window.saveToLS(); })
+      .catch(e=>{ console.warn('FB config save failed',e); setSyncStatus('err'); window.saveToLS(); });
+  };
+
+  // ── SAVE LIVE SLOT STATE (any role: check-in / check-out / reserve) ──
+  window.fbSaveLive = function(){
+    if(!window._fbReady){ window.saveToLS(); return; }
+    setSyncStatus('syncing');
+    const liveSlots = {};
+    window.areas.forEach(a => a.slots.forEach(s => {
+      liveSlots[s.id] = {
+        status:s.status, plate:s.plate||'', type:s.type||'',
+        since:s.since||null, ticket:s.ticket||null, area:a.id
+      };
+    }));
+    set(ref(db,'parking/live'), liveSlots)
+      .then(()=>{ setSyncStatus('ok'); window.saveToLS(); })
+      .catch(e=>{ console.warn('FB live save failed',e); setSyncStatus('err'); window.saveToLS(); });
+  };
+
+  // ── APPEND TX LOG ENTRY ──
+  window.fbPushLog = function(entry){
+    if(!window._fbReady) return;
+    push(ref(db,'parking/txLog'), entry)
+      .catch(e=>console.warn('FB log push failed',e));
+  };
+
+  // ════════════════════════════════════════════════════════
+  // REAL-TIME LISTENERS (subscribe once DOM is ready)
+  // ════════════════════════════════════════════════════════
+  window.addEventListener('DOMContentLoaded', ()=>{
+
+    // ── Listen: CONFIG ───────────────────────────────────
+    onValue(ref(db,'parking/config'), snap => {
+      const d = snap.val();
+      if(!d) return;
+      try{
+        if(d.bizName)  window.bizName = d.bizName;
+        if(d.bizLoc)   window.bizLoc  = d.bizLoc;
+        if(d.rates)    Object.assign(window.rates, d.rates);
+        if(d.VEHICLE_TYPES && d.VEHICLE_TYPES.length){
+          window.VEHICLE_TYPES.length=0;
+          d.VEHICLE_TYPES.forEach(t => window.VEHICLE_TYPES.push(t));
+        }
+        if(d.cashiers && d.cashiers.length){
+          window.cashiers.length=0;
+          d.cashiers.forEach(c => window.cashiers.push(c));
+        }
+        if(d.areas && d.areas.length){
+          // Merge areas: keep live slot state, update structure from config
+          const liveMap={};
+          window.areas.forEach(a=>a.slots.forEach(s=>{ liveMap[s.id]=s; }));
+          window.areas.length=0;
+          d.areas.forEach(a=>{
+            a.slots = a.slots.map(s => liveMap[s.id]
+              ? {...s, status:liveMap[s.id].status, plate:liveMap[s.id].plate,
+                       type:liveMap[s.id].type, since:liveMap[s.id].since, ticket:liveMap[s.id].ticket}
+              : s);
+            window.areas.push(a);
+          });
+          if(d.currentAreaId) window.currentAreaId = d.currentAreaId;
+        }
+        // Refresh UI
+        const hdr=document.getElementById('hdr-biz-name');if(hdr)hdr.textContent=window.bizName;
+        const bnEl=document.getElementById('biz-name'),blEl=document.getElementById('biz-loc');
+        if(bnEl)bnEl.value=window.bizName; if(blEl)blEl.value=window.bizLoc;
+        if(typeof window.buildRatesEditor==='function')   window.buildRatesEditor();
+        if(typeof window.renderCashiers==='function')     window.renderCashiers();
+        if(typeof window.renderAreaList==='function')     window.renderAreaList();
+        if(typeof window.renderAreaTabs==='function')     window.renderAreaTabs();
+        if(typeof window.renderFloorplan==='function')    window.renderFloorplan();
+        if(typeof window.refreshSlotDropdown==='function')window.refreshSlotDropdown();
+        if(typeof window.updateOnDutyWidget==='function') window.updateOnDutyWidget();
+        setSyncStatus('ok');
+      }catch(e){ console.warn('FB config apply error',e); }
+    }, e=>{ console.warn('FB config listener error',e); setSyncStatus('err'); });
+
+    // ── Listen: LIVE SLOTS ───────────────────────────────
+    onValue(ref(db,'parking/live'), snap => {
+      const d = snap.val();
+      if(!d) return;
+      try{
+        window.areas.forEach(a => a.slots.forEach(s => {
+          if(d[s.id]){
+            s.status = d[s.id].status || 'free';
+            s.plate  = d[s.id].plate  || '';
+            s.type   = d[s.id].type   || '';
+            s.since  = d[s.id].since  || null;
+            s.ticket = d[s.id].ticket || null;
+          }
+        }));
+        if(typeof window.renderFloorplan==='function')    window.renderFloorplan();
+        if(typeof window.refreshSlotDropdown==='function')window.refreshSlotDropdown();
+        if(typeof window.renderAdmin==='function')        window.renderAdmin();
+        setSyncStatus('ok');
+      }catch(e){ console.warn('FB live apply error',e); }
+    }, e=>{ console.warn('FB live listener error',e); setSyncStatus('err'); });
+
+    // ── Listen: TX LOG ───────────────────────────────────
+    onValue(ref(db,'parking/txLog'), snap => {
+      const d = snap.val();
+      if(!d) return;
+      try{
+        window.txLog.length=0;
+        // Firebase stores as object keyed by push-id; sort by time desc
+        Object.values(d)
+          .sort((a,b)=>(b.ts||0)-(a.ts||0))
+          .forEach(e=>window.txLog.push(e));
+        if(typeof window.renderLog==='function')   window.renderLog();
+        if(typeof window.renderAdmin==='function') window.renderAdmin();
+      }catch(e){ console.warn('FB txLog apply error',e); }
+    }, e=>{ console.warn('FB txLog listener error',e); setSyncStatus('err'); });
+
+  });
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+const DEFAULT_TYPES = ['Private Vehicle','Motorcycle','Delivery','QC Senior','PWD'];
+let VEHICLE_TYPES = [...DEFAULT_TYPES];
+let rates = {
+  'Private Vehicle':{mode:'payg',firstRate:60,succRate:30,overnight:0,overnightEnabled:false,enabled:true},
+  'Motorcycle':{mode:'tiered',hours:[{upto:2,rate:50},{upto:999,rate:10}],overnight:0,overnightEnabled:false,enabled:true},
+  'Delivery':{mode:'free_first',freeHours:1,succeedingRate:100,hours:[],overnight:0,overnightEnabled:false,enabled:true},
+  'QC Senior':{mode:'senior',freeHours:3,succRate:30,overnight:0,overnightEnabled:false,enabled:true},
+  'PWD':{mode:'pwd',overnight:0,overnightEnabled:false,enabled:true}
+};
+
+// AREAS: each area has id, name, sideALabel, sideBLabel, slots[]
+let areas = [
+  {
+    id:'area-1', name:'Roxas Avenue',
+    sideALabel:'East', sideBLabel:'West',
+    slots:[
+      ...Array.from({length:13},(_,i)=>({id:'E'+(i+1),area:'area-1',side:'A',num:i+1,status:'free',plate:'',type:'',since:null})),
+      ...Array.from({length:20},(_,i)=>({id:'W'+(i+14),area:'area-1',side:'B',num:i+14,status:'free',plate:'',type:'',since:null}))
+    ]
+  }
+];
+let currentAreaId = 'area-1';
+let sessions={}, txLog=[], cashiers=[], role='cashier', selSlot=null;
+let mapView='map', listFilter='all';
+let bizName='ACI Street Parking', bizLoc='Roxas Avenue';
+
+cashiers=[
+  {id:'ACI-001',name:'Juan Dela Cruz',shift:'Shift A',role:'Supervisor',active:true,shiftStart:'0900',shiftEnd:'2100',shiftDays:'M-F'},
+  {id:'ACI-002',name:'Maria Santos',shift:'Shift B',role:'Cashier',active:true,shiftStart:'1000',shiftEnd:'2200',shiftDays:'M-F'}
+];
+
+// Pre-populate demo data on area-1 ONLY if no saved state exists
+if(!localStorage.getItem('parksmartSettings_v1')){(function(){
+  const a=areas[0];
+  const occ=[{id:'E3',plate:'PQR 567',type:'Private Vehicle',since:Date.now()-5400000},{id:'E7',plate:'XYZ 999',type:'Private Vehicle',since:Date.now()-3600000},{id:'E11',plate:'GHI 111',type:'Motorcycle',since:Date.now()-2700000},{id:'W16',plate:'JKL 321',type:'Motorcycle',since:Date.now()-1800000},{id:'W20',plate:'MNO 888',type:'Private Vehicle',since:Date.now()-7200000},{id:'W25',plate:'DEF 456',type:'Delivery',since:Date.now()-3000000}];
+  const res=[{id:'E2',plate:'RES 001'},{id:'W28',plate:'RES 002'}];
+  occ.forEach(o=>{const s=a.slots.find(x=>x.id===o.id);if(s){s.status='occ';s.plate=o.plate;s.type=o.type;s.since=o.since;}});
+  res.forEach(r=>{const s=a.slots.find(x=>x.id===r.id);if(s){s.status='reserved';s.plate=r.plate;s.type='Private Vehicle';}});
+})();}
+
+// ══════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════
+function currentSlots(){return areas.find(a=>a.id===currentAreaId)?.slots||[];}
+function currentArea(){return areas.find(a=>a.id===currentAreaId);}
+function fmtDur(m){return m>=60?Math.floor(m/60)+'h '+(m%60)+'m':m+'m';}
+function safeKey(t){return t.replace(/[^a-zA-Z0-9]/g,'_');}
+
+function computeFee(type,mins,_opts){
+  const r=rates[type]||rates['Private Vehicle'];
+  let fee=0,breakdown=[],regularFee=0;
+
+  // ── Private Vehicle: Pay-as-you-park ─────────────────────────
+  // Entry ₱60 (covers first 30 min), then every 30 min or fraction ₱30
+  if(r.mode==='payg'){
+    const firstRate=r.firstRate||60,succRate=r.succRate||30;
+    if(mins<=0)return{fee:0,breakdown:'No charge',regularFee:0};
+    fee=firstRate;breakdown.push(`Entry ₱${firstRate}`);
+    if(mins>30){const extra=Math.ceil((mins-30)/30);fee+=extra*succRate;breakdown.push(`${extra}×30min ₱${succRate}`);}
+    fee=Math.ceil(fee);
+    const vatAmt=Math.round(fee/1.12*0.12);
+    breakdown.push(`VAT incl. ₱${vatAmt}`);
+    return{fee,breakdown:breakdown.join(' + '),regularFee:fee};
+  }
+
+  // ── QC Senior: First 3h free, then ₱30 per 30 min or fraction ─
+  if(r.mode==='senior'){
+    const freeH=r.freeHours||3,succRate=r.succRate||30,freeMins=freeH*60;
+    if(mins<=freeMins)return{fee:0,breakdown:`First ${freeH}h FREE`,regularFee:0};
+    const extra=Math.ceil((mins-freeMins)/30);fee=extra*succRate;
+    const vatAmt=Math.round(fee/1.12*0.12);
+    return{fee:Math.ceil(fee),breakdown:`First ${freeH}h FREE + ${extra}×30min ₱${succRate} + VAT incl. ₱${vatAmt}`,regularFee:Math.ceil(fee)};
+  }
+
+  // ── PWD: Regular PV rate → 20% discount → show VAT ────────────
+  if(r.mode==='pwd'){
+    const reg=computeFee('Private Vehicle',mins);
+    regularFee=reg.fee;
+    const discAmt=Math.round(regularFee*0.20);
+    const afterDisc=regularFee-discAmt;
+    const vatAmt=Math.round(afterDisc*0.12);
+    fee=afterDisc;
+    return{fee,breakdown:`Regular ₱${regularFee} | PWD 20% off −₱${discAmt} | VAT ₱${vatAmt} incl.`,regularFee,discAmt,vatAmt};
+  }
+
+  // ── Delivery: free first N hours, then ₱/hr ──────────────────
+  if(r.mode==='free_first'){
+    const freeH=r.freeHours||1,succRate=r.succeedingRate||100,totalHrs=mins/60;
+    if(totalHrs<=freeH){breakdown.push(`${freeH}h free`);}
+    else{const fracs=Math.ceil(totalHrs-freeH);fee=fracs*succRate;breakdown.push(`${freeH}h free + ${fracs}h × ₱${succRate}`);}
+    return{fee:Math.ceil(fee),breakdown:breakdown.join(', '),regularFee:Math.ceil(fee)};
+  }
+
+  // ── Tiered (Motorcycle, custom) ───────────────────────────────
+  const totalHrs=mins/60;
+  if(r.overnightEnabled&&r.overnight>0&&totalHrs>=12)return{fee:r.overnight,breakdown:`Overnight flat ₱${r.overnight}`,regularFee:r.overnight};
+  const tiers=r.hours||[];let remaining=totalHrs,prevUpto=0;
+  for(let i=0;i<tiers.length;i++){
+    const t=tiers[i],blockHrs=Math.min(remaining,t.upto-prevUpto);
+    if(blockHrs<=0)break;
+    let charge;
+    if(i===0&&t.upto>1){charge=t.rate;breakdown.push(`First ${t.upto}h flat ₱${t.rate}`);}
+    else{const fracs=Math.ceil(blockHrs);charge=fracs*t.rate;breakdown.push(`${i===0?'':'+'}${fracs}h × ₱${t.rate}`);}
+    fee+=charge;remaining-=blockHrs;prevUpto=t.upto;if(remaining<=0)break;
+  }
+  return{fee:Math.ceil(fee),breakdown:breakdown.join(', '),regularFee:Math.ceil(fee)};
+}
+
+// ══════════════════════════════════════════════════════
+// MAP RENDERING
+// ══════════════════════════════════════════════════════
+function renderAreaTabs(){
+  const el=document.getElementById('area-tabs');
+  el.innerHTML=areas.map(a=>`<button class="area-tab ${a.id===currentAreaId?'active':''}" onclick="switchArea('${a.id}')">${a.name}</button>`).join('');
+}
+
+function switchArea(id){
+  currentAreaId=id;
+  const a=currentArea();
+  document.getElementById('map-area-label').textContent=a?a.name:'';
+  document.getElementById('top-sub').textContent=(a?a.name:'')+(role==='admin'?' — Admin View':' — Cashier View');
+  renderAreaTabs();
+  renderFloorplan();
+}
+
+function renderFloorplan(){
+  const a=currentArea();if(!a)return;
+  const sl=currentSlots();
+  const sideA=sl.filter(s=>s.side==='A');
+  const sideB=sl.filter(s=>s.side==='B');
+  const mapEl=document.getElementById('map-view');
+  mapEl.innerHTML='';
+
+  const isRoxas = a.id==='area-1';
+
+  if(isRoxas){
+    // ── Two-row stacked layout ────────────────────────────────────
+    // SIDEWALK (top strip)
+    // Row 1: [E] E1…E12  E13-PWD    ← 13 slots, no scroll
+    // ROAD (middle strip)
+    // Row 2: [W] W14…W23            ← first 10
+    //            W24…W33            ← next 10  (2 sub-rows)
+    // Count bar
+
+    const fA=sideA.filter(x=>x.status==='free').length, oA=sideA.filter(x=>x.status==='occ').length;
+    const fB=sideB.filter(x=>x.status==='free').length, oB=sideB.filter(x=>x.status==='occ').length;
+
+    const wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;gap:0;';
+
+    // helper: make a full-width label strip
+    function sideLabel(text,bg,color){
+      const d=document.createElement('div');
+      d.style.cssText=`display:flex;align-items:center;justify-content:space-between;padding:3px 8px;background:${bg};`;
+      d.innerHTML=`<span style="font-size:9px;font-weight:800;color:${color};letter-spacing:.6px;">${text}</span>`;
+      return d;
+    }
+
+    // ── SIDEWALK ──
+    const swalk=document.createElement('div');
+    swalk.style.cssText='height:12px;background:repeating-linear-gradient(90deg,#ccc 0,#ccc 10px,#b8b8b0 10px,#b8b8b0 20px);border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:center;';
+    swalk.innerHTML=`<span style="font-size:6px;font-weight:700;color:#555;letter-spacing:1.5px;">SIDEWALK</span>`;
+    wrap.appendChild(swalk);
+
+    // ── EAST row label ──
+    const eastHdr=sideLabel('EAST ↑  E1–E13  (E13 = PWD)','#e8edf5','var(--navy)');
+    eastHdr.querySelector('span').innerHTML+=`<span style="margin-left:auto;font-size:9px;color:var(--muted);font-weight:500;"><b style="color:#2d7a1f">${fA}</b> free · <b style="color:var(--danger)">${oA}</b> taken</span>`;
+    eastHdr.style.cssText+='justify-content:space-between;';
+    wrap.appendChild(eastHdr);
+
+    // ── EAST slots grid (13 cells, equal width, no scroll) ──
+    const eastGrid=document.createElement('div');
+    eastGrid.style.cssText='display:grid;grid-template-columns:repeat(13,1fr);gap:3px;padding:4px 5px;background:var(--bg);';
+    sideA.forEach(s=>{
+      const c=makeCell(s);
+      c.style.width='100%';c.style.minWidth='0';c.style.flexShrink='0';
+      // PWD badge on E13
+      if(s.num===13){
+        c.style.outline='2px solid #185fa5';c.style.outlineOffset='0';c.style.position='relative';
+        const pwdTag=document.createElement('div');
+        pwdTag.style.cssText='position:absolute;bottom:0;left:0;right:0;background:#185fa5;color:#fff;font-size:4.5px;font-weight:800;text-align:center;padding:1px 0;letter-spacing:.3px;';
+        pwdTag.innerHTML='<i class="ti ti-wheelchair" style="font-size:7px"></i>';
+        c.appendChild(pwdTag);
+      }
+      eastGrid.appendChild(c);
+    });
+    wrap.appendChild(eastGrid);
+
+    // ── WEST row label ──
+    const westHdr=document.createElement('div');
+    westHdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:3px 8px;background:#e6f1fb;margin-top:3px;';
+    westHdr.innerHTML=`<span style="font-size:9px;font-weight:800;color:var(--blue);letter-spacing:.6px;">WEST ↓  W14–W33</span><span style="font-size:9px;color:var(--muted);"><b style="color:#2d7a1f">${fB}</b> free · <b style="color:var(--danger)">${oB}</b> taken</span>`;
+    wrap.appendChild(westHdr);
+
+    // ── WEST slots: two sub-rows of 10 ──
+    const westWrap=document.createElement('div');
+    westWrap.style.cssText='display:flex;flex-direction:column;gap:3px;padding:4px 5px;background:var(--bg);';
+    for(let i=0;i<sideB.length;i+=10){
+      const grp=sideB.slice(i,i+10);
+      const rowDiv=document.createElement('div');
+      rowDiv.style.cssText=`display:grid;grid-template-columns:repeat(${grp.length},1fr);gap:3px;`;
+      grp.forEach(s=>{const c=makeCell(s);c.style.width='100%';c.style.minWidth='0';rowDiv.appendChild(c);});
+      westWrap.appendChild(rowDiv);
+    }
+    wrap.appendChild(westWrap);
+
+    // ── ROAD strip (bottom) ──
+    const road=document.createElement('div');
+    road.style.cssText='height:20px;background:linear-gradient(180deg,#555,#888 40%,#555);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;margin-top:3px;';
+    road.innerHTML=`<div style="position:absolute;top:50%;left:0;right:0;height:2px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,#ffe66d 0,#ffe66d 14px,transparent 14px,transparent 28px)"></div><span style="font-size:7px;font-weight:800;color:#fff;letter-spacing:2px;z-index:1;text-shadow:0 1px 2px rgba(0,0,0,.6)">⬅  ROXAS AVENUE  ➡</span>`;
+    wrap.appendChild(road);
+
+    // ── Count bar ──
+    const counts=document.createElement('div');
+    counts.style.cssText='display:flex;gap:5px;padding:4px 5px 5px;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--bg);border-radius:0 0 4px 4px;';
+    const total=sideA.length+sideB.length,free=fA+fB,occ2=oA+oB;
+    counts.innerHTML=`<span style="font-size:9px;font-weight:600;color:#2d7a1f;background:#eaf3de;padding:2px 9px;border-radius:20px;">${free} Free</span><span style="font-size:9px;font-weight:600;color:var(--danger);background:#fcebeb;padding:2px 9px;border-radius:20px;">${occ2} Taken</span><span style="font-size:9px;font-weight:600;color:var(--muted);background:var(--bg);padding:2px 9px;border-radius:20px;border:1px solid var(--border)">${total} Total</span>`;
+    wrap.appendChild(counts);
+
+    mapEl.appendChild(wrap);
+
+  } else {
+    // Generic layout for added areas
+    if(sideA.length){
+      const hdrA=document.createElement('div');
+      hdrA.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:0 2px;margin-bottom:2px';
+      hdrA.innerHTML=`<span style="font-size:9px;font-weight:700;color:var(--navy);background:#e8edf5;padding:2px 7px;border-radius:4px">${a.sideALabel} →</span><span style="font-size:9px;color:var(--muted)">${sideA.filter(x=>x.status==='free').length} free / ${sideA.filter(x=>x.status==='occ').length} taken</span>`;
+      mapEl.appendChild(hdrA);
+      const rowWrap=document.createElement('div');rowWrap.className='lot-row-wrap';
+      const lbl=document.createElement('div');lbl.className='lot-row-label';lbl.textContent=a.sideALabel;
+      const grid=document.createElement('div');
+      grid.className='lot-grid';grid.style.gridTemplateColumns=`repeat(${Math.min(sideA.length,13)},1fr)`;grid.style.flex='1';
+      sideA.forEach(s=>grid.appendChild(makeCell(s)));
+      rowWrap.appendChild(lbl);rowWrap.appendChild(grid);mapEl.appendChild(rowWrap);
+    }
+    if(sideA.length&&sideB.length){
+      const road=document.createElement('div');road.className='road-strip';
+      road.textContent='⬅  '+(a.name).toUpperCase()+'  ➡';
+      mapEl.appendChild(road);
+    }
+    if(sideB.length){
+      const hdrB=document.createElement('div');
+      hdrB.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:0 2px;margin-bottom:2px;margin-top:3px';
+      hdrB.innerHTML=`<span style="font-size:9px;font-weight:700;color:var(--blue);background:#e6f1fb;padding:2px 7px;border-radius:4px">← ${a.sideBLabel}</span><span style="font-size:9px;color:var(--muted)">${sideB.filter(x=>x.status==='free').length} free / ${sideB.filter(x=>x.status==='occ').length} taken</span>`;
+      mapEl.appendChild(hdrB);
+      const rowWrap=document.createElement('div');rowWrap.className='lot-row-wrap';
+      const lbl=document.createElement('div');lbl.className='lot-row-label side-b';lbl.textContent=a.sideBLabel;
+      const rowsWrap=document.createElement('div');rowsWrap.style.cssText='flex:1;display:flex;flex-direction:column;gap:3px';
+      for(let i=0;i<sideB.length;i+=10){
+        const grp=sideB.slice(i,i+10);
+        const g=document.createElement('div');g.className='lot-grid';g.style.gridTemplateColumns=`repeat(${grp.length},1fr)`;
+        grp.forEach(s=>g.appendChild(makeCell(s)));rowsWrap.appendChild(g);
+      }
+      rowWrap.appendChild(lbl);rowWrap.appendChild(rowsWrap);mapEl.appendChild(rowWrap);
+    }
+  }
+
+  // Stats
+  document.getElementById('st-free').textContent=sl.filter(s=>s.status==='free').length;
+  document.getElementById('st-occ').textContent=sl.filter(s=>s.status==='occ').length;
+  document.getElementById('st-res').textContent=sl.filter(s=>s.status==='reserved').length;
+  refreshSlotDropdown();
+  if(mapView==='list')renderListView();
+}
+
+function makeCell(s){
+  const d=document.createElement('div');
+  d.className='slot-cell '+s.status+(selSlot===s.id?' selected':'');
+  d.id='sv-'+s.id;
+  d.style.cssText='width:100%;min-width:0;height:72px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid transparent;transition:transform .1s;position:relative;overflow:hidden;flex-shrink:0;';
+  if(s.status==='free') d.style.cssText+='background:#eaf3de;border-color:#6aa82a;';
+  else if(s.status==='occ') d.style.cssText+='background:#fcebeb;border-color:#e24b4a;';
+  else d.style.cssText+='background:#faeeda;border-color:#ba7517;';
+  if(selSlot===s.id) d.style.cssText+='outline:2px solid var(--blue);outline-offset:1px;box-shadow:0 0 0 3px rgba(24,95,165,.2);z-index:2;';
+  const icon=s.type==='Motorcycle'?'ti-motorbike':s.type==='Delivery'?'ti-truck':'ti-car';
+  const plateColor=s.status==='free'?'#3b6d11':s.status==='occ'?'#a32d2d':'#ba7517';
+  const plateParts=s.plate?s.plate.split(' '):'';
+  const plateHtml=plateParts.length===2?`<div style="font-size:6px;font-weight:700;color:${plateColor};line-height:1.2;text-align:center">${plateParts[0]}<br>${plateParts[1]}</div>`:(s.plate?`<div style="font-size:6px;font-weight:700;color:${plateColor};text-align:center">${s.plate}</div>`:'');
+  d.innerHTML=`<div style="font-size:7px;font-weight:800;color:#2c2c2a;line-height:1;margin-bottom:2px">${s.id}</div>${plateHtml}<i class="ti ${icon}" style="font-size:13px;color:${s.status==='free'?'#6aa82a':s.status==='occ'?'#e24b4a':'#ba7517'};line-height:1;margin-top:2px"></i>`;
+  d.onclick=()=>selectSlot(s.id);
+  return d;
+}
+
+function setMapView(v,btn){
+  mapView=v;
+  document.querySelectorAll('.map-view-btn').forEach(b=>{if(b.id&&b.id.startsWith('vbtn-'))b.classList.remove('active');});
+  btn.classList.add('active');
+  document.getElementById('map-view').style.display=v==='map'?'':'none';
+  document.getElementById('list-view').style.display=v==='list'?'':'none';
+  if(v==='list')renderListView();
+}
+
+function filterList(f,btn){
+  listFilter=f;
+  document.querySelectorAll('#list-view .map-view-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');renderListView();
+}
+
+function renderListView(){
+  const container=document.getElementById('slot-list-items');
+  let visible=currentSlots();
+  if(listFilter!=='all')visible=visible.filter(s=>s.status===listFilter);
+  if(!visible.length){container.innerHTML='<div style="text-align:center;padding:16px;font-size:12px;color:var(--muted)">No slots here.</div>';return;}
+  container.innerHTML=visible.map(s=>{
+    let rh='';
+    if(s.status==='occ'){const m=Math.floor((Date.now()-s.since)/60000),{fee}=computeFee(s.type,m);rh=`<div class="sli-fee">₱${fee}</div><div class="sli-status">${fmtDur(m)}</div>`;}
+    else if(s.status==='reserved')rh=`<div class="sli-status" style="color:var(--warn)">Reserved</div>`;
+    else rh=`<div class="sli-status" style="color:#2d7a1f">Available</div>`;
+    const icon=s.type==='Motorcycle'?'ti-motorbike':s.type==='Delivery'?'ti-truck':'ti-car';
+    const a=currentArea();
+    return `<div class="slot-list-item" onclick="selectSlot('${s.id}');setMapView('map',document.getElementById('vbtn-map'))">
+      <div class="sli-badge ${s.status}"><i class="ti ${icon}"></i></div>
+      <div class="sli-info"><div class="sli-id">${s.id} — ${s.side==='A'?a.sideALabel:a.sideBLabel}</div>
+      <div class="sli-meta">${s.status==='free'?'Empty':s.plate+(s.type?' · '+s.type:'')}</div></div>
+      <div class="sli-right">${rh}</div></div>`;
+  }).join('');
+}
+
+function selectSlot(id){
+  selSlot=id;
+  document.querySelectorAll('.slot-cell').forEach(e=>e.classList.remove('selected'));
+  const el=document.getElementById('sv-'+id);if(el)el.classList.add('selected');
+  const sl=currentSlots();const s=sl.find(x=>x.id===id);if(!s)return;
+  const a=currentArea();
+  const pp=document.getElementById('slot-popup');
+  const sideLabel=s.side==='A'?a.sideALabel:a.sideBLabel;
+  document.getElementById('pp-title').textContent='Slot '+id+' — '+sideLabel+' ('+a.name+')';
+  const body=document.getElementById('pp-body'),acts=document.getElementById('pp-acts');
+  if(s.status==='free'){
+    body.innerHTML=`<div class="pp-row"><span>Status</span><span style="color:#2d7a1f;font-weight:600">Available</span></div>`;
+    acts.innerHTML=`<button class="btn btn-primary" onclick="prefillCI('${id}')"><i class="ti ti-car"></i> Assign Vehicle</button><button class="btn btn-warn" onclick="reserveSlot('${id}')"><i class="ti ti-bookmark"></i> Mark Reserved</button>`;
+  }else if(s.status==='occ'){
+    const mins=Math.floor((Date.now()-s.since)/60000),{fee,breakdown}=computeFee(s.type,mins);
+    body.innerHTML=`<div class="pp-row"><span>Ticket No.</span><span style="font-family:monospace;font-weight:700;color:var(--blue)">${s.ticket||'—'}</span></div><div class="pp-row"><span>Plate</span><span style="font-weight:600">${s.plate}</span></div><div class="pp-row"><span>Type</span><span>${s.type}</span></div><div class="pp-row"><span>Duration</span><span>${fmtDur(mins)}</span></div><div class="pp-row"><span>Est. fee</span><span style="color:var(--danger);font-weight:700">₱${fee}</span></div><div class="pp-row" style="border:none"><span>Breakdown</span><span style="font-size:10px;text-align:right;max-width:60%">${breakdown}</span></div>`;
+    acts.innerHTML=`<button class="btn btn-primary" onclick="prefillCO('${s.plate}')"><i class="ti ti-logout"></i> Check Out</button>`;
+  }else{
+    body.innerHTML=`<div class="pp-row"><span>Status</span><span style="color:var(--warn);font-weight:600">Reserved</span></div><div class="pp-row"><span>Plate</span><span>${s.plate}</span></div>`;
+    acts.innerHTML=`<button class="btn btn-danger" onclick="clearReserve('${id}')"><i class="ti ti-x"></i> Clear Reservation</button>`;
+  }
+  pp.classList.add('show');pp.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function closePopup(){document.getElementById('slot-popup').classList.remove('show');selSlot=null;document.querySelectorAll('.slot-cell').forEach(e=>e.classList.remove('selected'));}
+function reserveSlot(id){const p=prompt('Plate for reservation:');if(!p)return;const s=currentSlots().find(x=>x.id===id);s.status='reserved';s.plate=p.toUpperCase();s.type='Private Vehicle';closePopup();renderFloorplan();toast('Slot '+id+' reserved');}
+function clearReserve(id){const s=currentSlots().find(x=>x.id===id);s.status='free';s.plate='';s.type='';s.since=null;closePopup();renderFloorplan();toast('Reservation cleared');}
+function prefillCI(id){closePopup();sw('cashier',document.querySelectorAll('.tab')[1]);document.getElementById('ci-slot').value=id;}
+function prefillCO(plate){closePopup();sw('cashier',document.querySelectorAll('.tab')[1]);document.getElementById('co-plate').value=plate;lookupPlate(plate);}
+
+function refreshSlotDropdown(){
+  const sel=document.getElementById('ci-slot');const prev=sel.value;sel.innerHTML='';
+  currentSlots().filter(s=>s.status==='free').forEach(s=>{
+    const o=document.createElement('option');const a=currentArea();
+    o.value=s.id;o.textContent='Slot '+s.id+' — '+(s.side==='A'?a.sideALabel:a.sideBLabel);sel.appendChild(o);
+  });
+  if(prev)sel.value=prev;
+  const tsel=document.getElementById('ci-type');tsel.innerHTML='';
+  VEHICLE_TYPES.forEach(t=>{if(rates[t]&&rates[t].enabled===false)return;const o=document.createElement('option');o.value=t;o.textContent=t;tsel.appendChild(o);});
+  tsel.onchange=autoFillTicket;
+  autoFillTicket();
+}
+
+// ══════════════════════════════════════════════════════
+// CHECKIN / CHECKOUT
+// ══════════════════════════════════════════════════════
+function checkIn(){
+  const ticket=document.getElementById('ci-ticket').value.trim().toUpperCase();
+  const plate=document.getElementById('ci-plate').value.trim().toUpperCase();
+  const type=document.getElementById('ci-type').value;
+  const sid=document.getElementById('ci-slot').value;
+  if(!ticket){toast('Enter ticket series number');document.getElementById('ci-ticket').focus();return;}
+  if(!plate||!sid){toast('Enter plate and pick a slot');return;}
+  const s=currentSlots().find(x=>x.id===sid);
+  if(!s||s.status!=='free'){toast('Slot not available');return;}
+  s.status='occ';s.plate=plate;s.type=type;s.since=Date.now();s.ticket=ticket;sessions[sid]={id:sid,plate,type,since:Date.now(),ticket};
+  consumeTicket(type);
+  const now=new Date(),ac=dutyTickets.cashierOnDuty||(cashiers.find(c=>c.active)||{name:'On Duty'}).name;
+  const a=currentArea();const sideLabel=s.side==='A'?a.sideALabel:a.sideBLabel;
+  document.getElementById('rc-ticket').textContent=ticket;
+  document.getElementById('rc-slot').textContent=sid+' — '+sideLabel+' ('+a.name+')';
+  document.getElementById('rc-plate').textContent=plate;
+  document.getElementById('rc-type').textContent=type;
+  document.getElementById('rc-in').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('rc-date').textContent=now.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('rc-cashier').textContent=ac;
+  document.getElementById('ci-receipt').classList.add('show');
+  document.getElementById('ci-ticket').value='';
+  document.getElementById('ci-plate').value='';
+  // Auto-fill next ticket for same type
+  autoFillTicket();
+  renderFloorplan();toast('Checked in — Slot '+sid+' · Ticket '+ticket);saveLive();
+}
+
+function lookupPlate(v){
+  v=v.toUpperCase();
+  // Search all areas
+  let found=null;
+  for(const a of areas){const s=a.slots.find(x=>x.plate===v&&x.status==='occ');if(s){found={s,a};break;}}
+  const info=document.getElementById('co-info');
+  if(found){const mins=Math.floor((Date.now()-found.s.since)/60000),{fee}=computeFee(found.s.type,mins);
+    info.innerHTML=`<span style="color:#2d7a1f">Found: Slot ${found.s.id} · ${found.s.type} · ${fmtDur(mins)} · Est. ₱${fee} · ${found.a.name}</span>`;}
+  else if(v.length>2)info.innerHTML=`<span style="color:var(--muted)">No active session.</span>`;
+  else info.innerHTML='';
+}
+
+function checkOut(){
+  const plate=document.getElementById('co-plate').value.trim().toUpperCase();
+  let found=null;
+  for(const a of areas){const s=a.slots.find(x=>x.plate===plate&&x.status==='occ');if(s){found={s,a};break;}}
+  if(!found){toast('No active session for that plate');return;}
+  const{s,a}=found;
+  const mins=Math.floor((Date.now()-s.since)/60000),result=computeFee(s.type,mins),dur=fmtDur(mins);
+  const{fee,breakdown}=result;
+  const sideLabel=s.side==='A'?a.sideALabel:a.sideBLabel;
+  document.getElementById('cor-slot').textContent=s.id+' — '+sideLabel+' ('+a.name+')';
+  document.getElementById('cor-plate').textContent=plate;
+  document.getElementById('cor-type').textContent=s.type;
+  document.getElementById('cor-dur').textContent=dur;
+  document.getElementById('cor-breakdown').innerHTML=breakdown.split(' | ').join('<br>').split(' + ').join('<br>');
+  // PWD discount rows
+  const isPwd=s.type==='PWD';
+  document.getElementById('cor-reg-row').style.display=isPwd?'':'none';
+  document.getElementById('cor-disc-row').style.display=isPwd?'':'none';
+  document.getElementById('cor-vat-row').style.display=isPwd?'':'none';
+  if(isPwd&&result.regularFee!=null){
+    document.getElementById('cor-regular').textContent='₱'+result.regularFee;
+    document.getElementById('cor-discount').textContent='−₱'+result.discAmt;
+    document.getElementById('cor-vat').textContent='₱'+result.vatAmt;
+  }
+  document.getElementById('cor-total').textContent='₱'+fee;
+  document.getElementById('co-receipt').classList.add('show');
+  const _logEntry={slot:s.id,area:a.name,side:sideLabel,plate,type:s.type,dur,fee,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
+  txLog.unshift(_logEntry);
+  pushLog(_logEntry);
+  s.status='free';s.plate='';s.type='';s.since=null;delete sessions[s.id];
+  document.getElementById('co-plate').value='';document.getElementById('co-info').innerHTML='';
+  renderFloorplan();renderLog();toast('Checked out — ₱'+fee+' collected');saveLive();
+}
+
+// ══════════════════════════════════════════════════════
+// LOG
+// ══════════════════════════════════════════════════════
+function renderLog(){
+  const list=document.getElementById('log-list');
+  if(!txLog.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px">No checkouts yet.</div>';document.getElementById('log-summary').textContent='No transactions yet.';return;}
+  const total=txLog.reduce((a,b)=>a+b.fee,0);
+  document.getElementById('log-summary').textContent=`Today: ${txLog.length} vehicle${txLog.length>1?'s':''} · ₱${total} collected`;
+  list.innerHTML=txLog.map(e=>`<div class="log-item"><div class="log-badge">${e.slot}</div><div class="log-info"><div class="log-plate">${e.plate}</div><div class="log-meta">${e.type} · ${e.dur} · ${e.area}</div></div><div class="log-right"><div class="log-amt">₱${e.fee}</div><div class="log-time">${e.time}</div></div></div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// RATES
+// ══════════════════════════════════════════════════════
+function addParkerType(){
+  const inp=document.getElementById('new-type-name'),name=inp.value.trim();
+  if(!name){toast('Enter a type name');return;}
+  if(VEHICLE_TYPES.includes(name)){toast('Type already exists');return;}
+  VEHICLE_TYPES.push(name);rates[name]={mode:'tiered',hours:[{upto:1,rate:50},{upto:999,rate:30}],overnight:0,overnightEnabled:false,enabled:true};
+  inp.value='';buildRatesEditor();refreshSlotDropdown();toast(name+' type added');
+  saveConfig();
+}
+function deleteParkerType(type){
+  if(DEFAULT_TYPES.includes(type)){toast('Cannot delete built-in types');return;}
+  if(!confirm('Delete "'+type+'" parker type?'))return;
+  VEHICLE_TYPES=VEHICLE_TYPES.filter(t=>t!==type);delete rates[type];buildRatesEditor();refreshSlotDropdown();toast(type+' removed');
+  saveConfig();
+}
+function addTier(key){const type=VEHICLE_TYPES.find(t=>safeKey(t)===key);if(!type)return;rates[type].hours.push({upto:999,rate:20});buildRatesEditor();}
+function deleteTier(key,idx){const type=VEHICLE_TYPES.find(t=>safeKey(t)===key);if(!type)return;if(rates[type].hours.length<=1){toast('Need at least 1 tier');return;}rates[type].hours.splice(idx,1);buildRatesEditor();}
+function toggleRateEnabled(key){
+  const type=VEHICLE_TYPES.find(t=>safeKey(t)===key);if(!type)return;
+  rates[type].enabled=!rates[type].enabled;
+  buildRatesEditor();refreshSlotDropdown();
+  toast(type+' rate '+(rates[type].enabled?'enabled':'disabled'));
+  saveConfig();
+}
+function buildRatesEditor(){
+  const el=document.getElementById('rates-editor');
+  el.innerHTML=VEHICLE_TYPES.map(t=>{
+    const key=safeKey(t),r=rates[t],isDefault=DEFAULT_TYPES.includes(t);
+
+    // ── PAYG: Private Vehicle ──
+    if(r.mode==='payg'){
+      const disabledStyle=r.enabled===false?'opacity:0.5;':'';
+      return`<div class="rate-section" style="${disabledStyle}">
+        <div class="rate-type-hdr"><span>🚗 ${t}</span><div style="display:flex;gap:6px;align-items:center"><span style="font-size:10px;color:var(--muted)">Pay-As-You-Park</span><label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:600;color:${r.enabled===false?'var(--danger)':'#2d7a1f'}"><input type="checkbox" ${r.enabled===false?'':'checked'} onchange="toggleRateEnabled('${key}')" style="cursor:pointer">${r.enabled===false?'Disabled':'Enabled'}</label></div></div>
+        <div class="rate-note">First entry fee covers first 30 min. Each additional 30 min or fraction is charged separately.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Entry rate (₱)</label>
+          <input type="number" id="payg-first-${key}" value="${r.firstRate||60}" min="0" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;font-weight:700"></div>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Per 30 min (₱)</label>
+          <input type="number" id="payg-succ-${key}" value="${r.succRate||30}" min="0" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;font-weight:700"></div>
+        </div>
+        <div style="margin-top:6px;padding:6px 8px;background:#e8f4fd;border-radius:6px;font-size:10px;color:var(--blue)">
+          <b>Example:</b> 1h 10min = Entry ₱${r.firstRate||60} + 2×30min ₱${(r.succRate||30)*2} = <b>₱${(r.firstRate||60)+(r.succRate||30)*2}</b> · VAT included in rate
+        </div>
+      </div>`;
+    }
+
+    // ── SENIOR: QC Senior ──
+    if(r.mode==='senior'){
+      const disabledStyle=r.enabled===false?'opacity:0.5;':'';
+      return`<div class="rate-section" style="${disabledStyle}">
+        <div class="rate-type-hdr"><span>👴 ${t}</span><div style="display:flex;gap:6px;align-items:center"><span style="font-size:10px;color:var(--muted)">QC Senior Citizen</span><label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:600;color:${r.enabled===false?'var(--danger)':'#2d7a1f'}"><input type="checkbox" ${r.enabled===false?'':'checked'} onchange="toggleRateEnabled('${key}')" style="cursor:pointer">${r.enabled===false?'Disabled':'Enabled'}</label></div></div>
+        <div class="rate-note">First N hours free. After that, ₱ per 30 min or fraction thereof.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Free hours</label>
+          <input type="number" id="sen-free-${key}" value="${r.freeHours||3}" min="0" step="0.5" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;font-weight:700"></div>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Per 30 min (₱)</label>
+          <input type="number" id="sen-succ-${key}" value="${r.succRate||30}" min="0" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;font-weight:700"></div>
+        </div>
+        <div style="margin-top:6px;padding:6px 8px;background:#eaf3de;border-radius:6px;font-size:10px;color:#2d7a1f">
+          <b>Example:</b> 4h = 3h FREE + 2×30min ₱${(r.succRate||30)*2} = <b>₱${(r.succRate||30)*2}</b>
+        </div>
+      </div>`;
+    }
+
+    // ── PWD ──
+    if(r.mode==='pwd'){
+      const disabledStyle=r.enabled===false?'opacity:0.5;':'';
+      return`<div class="rate-section" style="${disabledStyle}">
+        <div class="rate-type-hdr"><span>♿ ${t}</span><div style="display:flex;gap:6px;align-items:center"><span style="font-size:10px;color:var(--muted)">PWD Discount</span><label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:600;color:${r.enabled===false?'var(--danger)':'#2d7a1f'}"><input type="checkbox" ${r.enabled===false?'':'checked'} onchange="toggleRateEnabled('${key}')" style="cursor:pointer">${r.enabled===false?'Disabled':'Enabled'}</label></div></div>
+        <div style="padding:8px;background:#e6f1fb;border-radius:6px;font-size:11px;color:var(--blue);line-height:1.6">
+          Uses <b>Private Vehicle</b> rate as base.<br>
+          <b>20% discount</b> applied on total.<br>
+          VAT (12%) is shown separately in receipt.
+        </div>
+        <div style="margin-top:6px;padding:6px 8px;background:#f0e6fb;border-radius:6px;font-size:10px;color:#7a0585">
+          <b>Example:</b> Regular ₱120 → 20% off −₱24 → <b>You Pay ₱96</b> · VAT incl.
+        </div>
+      </div>`;
+    }
+
+    // ── Delivery (free_first) ──
+    if(r.mode==='free_first'){
+      const disabledStyle=r.enabled===false?'opacity:0.5;':'';
+      return`<div class="rate-section" style="${disabledStyle}">
+        <div class="rate-type-hdr"><span>🚚 ${t}</span><div style="display:flex;gap:6px;align-items:center">${!isDefault?`<span class="rate-delete-type" onclick="deleteParkerType('${t}')">✕ Remove</span>`:''}<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:600;color:${r.enabled===false?'var(--danger)':'#2d7a1f'}"><input type="checkbox" ${r.enabled===false?'':'checked'} onchange="toggleRateEnabled('${key}')" style="cursor:pointer">${r.enabled===false?'Disabled':'Enabled'}</label></div></div>
+        <div class="rate-note">First N hours free, then ₱/hr or fraction.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Free hours</label>
+          <input type="number" id="del-free-${key}" value="${r.freeHours||1}" min="0" step="0.5" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px"></div>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Rate after (₱/hr)</label>
+          <input type="number" id="del-rate-${key}" value="${r.succeedingRate||100}" min="0" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px"></div>
+        </div>
+      </div>`;
+    }
+
+    // ── Tiered (Motorcycle, custom) ──
+    const tiersHtml=(r.hours||[]).map((tier,i)=>`<div class="hour-row"><span class="hr-lbl">${i===0?'Base':'Tier '+(i+1)}</span><input type="number" id="tu-${key}-${i}" value="${tier.upto===999?'':tier.upto}" placeholder="hrs cap"><input type="number" id="tr-${key}-${i}" value="${tier.rate}" placeholder="₱"><button class="del-hour-btn" onclick="deleteTier('${key}',${i})">✕</button></div>`).join('');
+    const disabledStyleT=r.enabled===false?'opacity:0.5;':'';
+    return`<div class="rate-section" style="${disabledStyleT}">
+      <div class="rate-type-hdr"><span>${t}</span><div style="display:flex;gap:5px;align-items:center"><label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:600;color:${r.enabled===false?'var(--danger)':'#2d7a1f'}"><input type="checkbox" ${r.enabled===false?'':'checked'} onchange="toggleRateEnabled('${key}')" style="cursor:pointer">${r.enabled===false?'Disabled':'Enabled'}</label><button class="btn-sm btn" onclick="addTier('${key}')" style="margin:0">+ Tier</button>${!isDefault?`<span class="rate-delete-type" onclick="deleteParkerType('${t}')">✕</span>`:''}</div></div>
+      <div class="rate-note">Hrs cap (blank=unlimited) | ₱ per tier. Fraction rounded up.</div>
+      <div>${tiersHtml}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:6px 0;border-top:1px solid var(--border)">
+        <label style="font-size:11px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer">
+          <input type="checkbox" id="ov-enabled-${key}" ${r.overnightEnabled?'checked':''} onchange="toggleOvEnabled('${key}')">Overnight (12MN) ₱
+        </label>
+        <input type="number" id="ov-rate-${key}" value="${r.overnight||0}" style="width:70px;padding:4px 7px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text)" ${r.overnightEnabled?'':'disabled'}>
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleOvEnabled(key){const en=document.getElementById('ov-enabled-'+key).checked;document.getElementById('ov-rate-'+key).disabled=!en;}
+function saveRates(){
+  VEHICLE_TYPES.forEach(t=>{
+    const key=safeKey(t),r=rates[t];
+    if(r.mode==='payg'){
+      const f=document.getElementById('payg-first-'+key),s=document.getElementById('payg-succ-'+key);
+      if(f)r.firstRate=parseFloat(f.value)||60;if(s)r.succRate=parseFloat(s.value)||30;return;
+    }
+    if(r.mode==='senior'){
+      const f=document.getElementById('sen-free-'+key),s=document.getElementById('sen-succ-'+key);
+      if(f)r.freeHours=parseFloat(f.value)||3;if(s)r.succRate=parseFloat(s.value)||30;return;
+    }
+    if(r.mode==='pwd'){return;} // no editable fields
+    if(r.mode==='free_first'){
+      const f=document.getElementById('del-free-'+key),rr=document.getElementById('del-rate-'+key);
+      if(f)r.freeHours=parseFloat(f.value)||1;if(rr)r.succeedingRate=parseFloat(rr.value)||100;return;
+    }
+    const newTiers=[];r.hours.forEach((_,i)=>{const uEl=document.getElementById('tu-'+key+'-'+i),rEl=document.getElementById('tr-'+key+'-'+i);if(!uEl||!rEl)return;newTiers.push({upto:parseFloat(uEl.value)||999,rate:parseFloat(rEl.value)||0});});
+    if(newTiers.length){newTiers[newTiers.length-1].upto=999;r.hours=newTiers;}
+    const ovEn=document.getElementById('ov-enabled-'+key),ovRt=document.getElementById('ov-rate-'+key);
+    if(ovEn)r.overnightEnabled=ovEn.checked;if(ovRt)r.overnight=parseFloat(ovRt.value)||0;
+  });
+  document.getElementById('rates-saved').style.display='block';setTimeout(()=>document.getElementById('rates-saved').style.display='none',3000);toast('Rates saved ✓');
+  saveConfig();
+}
+
+// ══════════════════════════════════════════════════════
+// STAFF
+// ══════════════════════════════════════════════════════
+function isOnDutyNow(c){
+  const now=new Date();
+  const hhmm=now.getHours()*100+now.getMinutes();
+  const start=parseInt((c.shiftStart||'0000').replace(':',''))||0;
+  const end=parseInt((c.shiftEnd||'2359').replace(':',''))||2359;
+  // Day check
+  const dayMap=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const today=dayMap[now.getDay()];
+  const days=(c.shiftDays||'M-F');
+  let dayOk=true;
+  if(days==='M-F')dayOk=['Mo','Tu','We','Th','Fr'].includes(today);
+  else if(days==='Daily'||days==='Everyday')dayOk=true;
+  else if(days==='Sat-Sun'||days==='Weekends')dayOk=['Sa','Su'].includes(today);
+  return dayOk && hhmm>=start && hhmm<end;
+}
+function fmtShiftTime(c){
+  const s=c.shiftStart||'0900', e=c.shiftEnd||'2100';
+  const fmt=t=>{const h=parseInt(t.slice(0,-2)||0),m=t.slice(-2),ap=h>=12?'PM':'AM',hh=h>12?h-12:h||12;return hh+':'+(m==='00'?'00':m)+ap;};
+  return fmt(s)+'–'+fmt(e);
+}
+function renderCashiers(editIdx=-1){
+  document.getElementById('staff-count').textContent='('+cashiers.length+')';
+  const list=document.getElementById('cashier-list');
+  if(!cashiers.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No staff yet.</div>';return;}
+  list.innerHTML=cashiers.map((c,i)=>{
+    const onDuty=isOnDutyNow(c);
+    if(i===editIdx){
+      return`<div class="cashier-row" style="flex-direction:column;align-items:stretch;gap:6px;padding:8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Full Name</label><input id="ec-name-${i}" value="${c.name}" style="width:100%;padding:5px 7px;border:1px solid var(--blue);border-radius:6px;background:var(--card);color:var(--text);font-size:12px"></div>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Employee ID</label><input id="ec-id-${i}" value="${c.id}" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Shift Name</label><input id="ec-shift-${i}" value="${c.shift||''}" placeholder="e.g. Shift A" list="shift-suggestions" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px"></div>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Role</label><select id="ec-role-${i}" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px"><option ${c.role==='Cashier'?'selected':''}>Cashier</option><option ${c.role==='Supervisor'?'selected':''}>Supervisor</option><option ${c.role==='Guard'?'selected':''}>Guard</option></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Start (HHMM)</label><input id="ec-start-${i}" value="${c.shiftStart||'0900'}" placeholder="0900" maxlength="4" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;font-family:monospace;font-weight:700"></div>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">End (HHMM)</label><input id="ec-end-${i}" value="${c.shiftEnd||'2100'}" placeholder="2100" maxlength="4" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;font-family:monospace;font-weight:700"></div>
+          <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Days</label><select id="ec-days-${i}" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:11px"><option ${(c.shiftDays||'M-F')==='M-F'?'selected':''}>M-F</option><option ${c.shiftDays==='Daily'?'selected':''}>Daily</option><option ${c.shiftDays==='Weekends'?'selected':''}>Weekends</option></select></div>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="renderCashiers()">Cancel</button>
+          <button class="btn btn-sm btn-primary" onclick="saveCashier(${i})"><i class="ti ti-check"></i> Save</button>
+        </div>
+      </div>`;
+    }
+    return`<div class="cashier-row" style="${onDuty?'border-left:3px solid #1d9e75;':''}"><div class="ca-avatar" style="${onDuty?'background:#1d9e75;':''}">${c.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div><div class="ca-info"><div class="ca-name" style="display:flex;align-items:center;gap:5px">${c.name}${onDuty?'<span style="font-size:9px;background:#eaf7f1;color:#1d9e75;border-radius:20px;padding:1px 6px;font-weight:700">ON DUTY</span>':''}</div><div class="ca-meta">${c.id} · ${c.role} · ${c.shift||''} <span style="color:var(--blue);font-weight:600">${fmtShiftTime(c)}</span> <span style="color:var(--muted)">${c.shiftDays||'M-F'}</span></div></div><div class="ca-actions"><button class="btn btn-sm btn-accent" onclick="renderCashiers(${i})"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-danger" onclick="deleteCashier(${i})"><i class="ti ti-trash"></i></button></div></div>`;
+  }).join('');
+}
+function saveCashier(i){
+  const name=document.getElementById('ec-name-'+i).value.trim();
+  const id=document.getElementById('ec-id-'+i).value.trim();
+  const shift=document.getElementById('ec-shift-'+i).value.trim();
+  const role=document.getElementById('ec-role-'+i).value;
+  const shiftStart=document.getElementById('ec-start-'+i).value.trim().replace(':','').padStart(4,'0');
+  const shiftEnd=document.getElementById('ec-end-'+i).value.trim().replace(':','').padStart(4,'0');
+  const shiftDays=document.getElementById('ec-days-'+i).value;
+  if(!name||!id){toast('Name and ID required');return;}
+  cashiers[i]={...cashiers[i],name,id,shift,role,shiftStart,shiftEnd,shiftDays};
+  renderCashiers();toast('Staff updated');
+  saveConfig();updateOnDutyWidget();
+}
+function addCashier(){
+  const name=document.getElementById('ca-name').value.trim(),id=document.getElementById('ca-id').value.trim();
+  if(!name||!id){toast('Enter name and ID');return;}
+  cashiers.push({id,name,shift:document.getElementById('ca-shift').value,role:document.getElementById('ca-role').value,active:true,shiftStart:'0900',shiftEnd:'2100',shiftDays:'M-F'});
+  document.getElementById('ca-name').value='';document.getElementById('ca-id').value='';document.getElementById('ca-shift').value='';
+  renderCashiers();toast(name+' added');
+  saveConfig();updateOnDutyWidget();
+}
+function deleteCashier(i){if(!confirm('Remove '+cashiers[i].name+'?'))return;cashiers.splice(i,1);renderCashiers();toast('Staff removed');saveConfig();}
+
+// ══════════════════════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════════════════════
+function renderAdmin(){
+  // Aggregate across all areas
+  let allOcc=[],allRes=[];let totalFree=0;
+  areas.forEach(a=>{a.slots.forEach(s=>{if(s.status==='occ')allOcc.push({s,a});else if(s.status==='reserved')allRes.push({s,a});else totalFree++;});});
+  const total=txLog.reduce((a,b)=>a+b.fee,0);
+  const est=allOcc.reduce((acc,{s})=>{const mins=Math.floor((Date.now()-s.since)/60000);return acc+computeFee(s.type,mins).fee;},0);
+  document.getElementById('admin-summary').innerHTML=`<div class="sum-card"><div class="sum-val green">${totalFree}</div><div class="sum-lbl">Free slots</div></div><div class="sum-card"><div class="sum-val red">${allOcc.length}</div><div class="sum-lbl">Occupied</div></div><div class="sum-card"><div class="sum-val amber">${allRes.length}</div><div class="sum-lbl">Reserved</div></div><div class="sum-card"><div class="sum-val blue">₱${total}</div><div class="sum-lbl">Collected</div></div><div class="sum-card" style="grid-column:1/-1"><div class="sum-val" style="color:var(--accent)">₱${est}</div><div class="sum-lbl">Est. pending (live)</div></div>`;
+  const occRow=({s,a})=>{const mins=Math.floor((Date.now()-s.since)/60000),{fee}=computeFee(s.type,mins),sl=s.side==='A'?a.sideALabel:a.sideBLabel;return`<div class="admin-slot-row"><div><div class="asr-slot">${s.id} — ${s.plate}</div><div class="asr-meta">${s.type} · ${fmtDur(mins)} · ${a.name} ${sl}</div></div><div class="asr-fee">₱${fee}</div></div>`;};
+  document.getElementById('adm-east').innerHTML=allOcc.length?allOcc.map(occRow).join(''):'<div style="font-size:11px;color:var(--muted);padding:5px 0">No occupied slots.</div>';
+  document.getElementById('adm-res').innerHTML=allRes.length?allRes.map(({s,a})=>`<div class="admin-slot-row"><div><div class="asr-slot">${s.id} — ${s.plate}</div><div class="asr-meta">${a.name}</div></div><span class="badge" style="background:#faeeda;color:#7a3f00">Reserved</span></div>`).join(''):'<div style="font-size:11px;color:var(--muted);padding:5px 0">None.</div>';
+  const logTotal=txLog.reduce((a,b)=>a+b.fee,0);
+  document.getElementById('adm-log').innerHTML=txLog.length?`<div style="font-size:11px;font-weight:600;margin-bottom:6px">₱${logTotal} from ${txLog.length} vehicle${txLog.length>1?'s':''}</div>`+txLog.map(e=>`<div class="admin-slot-row"><div><div class="asr-slot">${e.plate}</div><div class="asr-meta">${e.slot} · ${e.dur} · ${e.area}</div></div><div style="text-align:right"><div class="asr-fee">₱${e.fee}</div><div style="font-size:10px;color:var(--muted)">${e.time}</div></div></div>`).join(''):'<div style="font-size:11px;color:var(--muted);padding:5px 0">No transactions yet.</div>';
+}
+
+// ══════════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════════
+function saveBizInfo(){
+  const n=document.getElementById('biz-name').value.trim();
+  const l=document.getElementById('biz-loc').value.trim();
+  bizName=n||bizName; bizLoc=l||bizLoc;
+  // Update header branding live
+  const hdr=document.getElementById('hdr-biz-name');
+  if(hdr)hdr.textContent=bizName;
+  // Update area sub label
+  const sub=document.getElementById('top-sub');
+  const a=currentArea();
+  if(sub&&a)sub.textContent=bizLoc+(a?' — '+a.name:'')+' — '+(role==='admin'?'Admin View':'Cashier View');
+  toast('Business info saved ✓');
+  saveConfig();
+}
+
+function renderAreaList(){
+  const el=document.getElementById('area-list');
+  el.innerHTML=areas.map((a,i)=>`
+    <div class="area-item">
+      <div style="flex:1">
+        <div class="area-item-name">${a.name}</div>
+        <div class="area-item-meta">${a.sideALabel} (${a.slots.filter(s=>s.side==='A').length}) · ${a.sideBLabel} (${a.slots.filter(s=>s.side==='B').length}) · ${a.slots.length} total slots</div>
+      </div>
+      ${areas.length>1?`<button class="btn btn-sm btn-danger" onclick="removeArea('${a.id}')"><i class="ti ti-trash"></i></button>`:''}
+    </div>`).join('');
+  // Populate slot manager dropdown
+  const sel=document.getElementById('slot-mgr-area');
+  sel.innerHTML=areas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  renderSlotManager();
+}
+
+function addArea(){
+  const name=document.getElementById('new-area-name').value.trim();
+  if(!name){toast('Enter area name');return;}
+  const sideA=document.getElementById('new-area-sideA').value.trim()||'Side A';
+  const sideB=document.getElementById('new-area-sideB').value.trim()||'Side B';
+  const cntA=parseInt(document.getElementById('new-area-slotsA').value)||10;
+  const cntB=parseInt(document.getElementById('new-area-slotsB').value)||10;
+  const id='area-'+Date.now();
+  const newSlots=[
+    ...Array.from({length:cntA},(_,i)=>({id:'A'+(i+1)+'-'+id.slice(-4),area:id,side:'A',num:i+1,status:'free',plate:'',type:'',since:null})),
+    ...Array.from({length:cntB},(_,i)=>({id:'B'+(i+1)+'-'+id.slice(-4),area:id,side:'B',num:i+1,status:'free',plate:'',type:'',since:null}))
+  ];
+  areas.push({id,name,sideALabel:sideA,sideBLabel:sideB,slots:newSlots});
+  document.getElementById('new-area-name').value='';
+  renderAreaList();renderAreaTabs();toast(name+' area added');
+  saveConfig();
+}
+
+function removeArea(id){
+  if(areas.length<=1){toast('Cannot remove the last area');return;}
+  const a=areas.find(x=>x.id===id);
+  if(!confirm('Remove area "'+a.name+'" and all its slots?'))return;
+  areas=areas.filter(x=>x.id!==id);
+  if(currentAreaId===id)currentAreaId=areas[0].id;
+  renderAreaList();renderAreaTabs();renderFloorplan();toast('Area removed');
+  saveConfig();
+}
+
+function renderSlotManager(){
+  const areaId=document.getElementById('slot-mgr-area').value;
+  const a=areas.find(x=>x.id===areaId);if(!a)return;
+  const el=document.getElementById('slot-manager-view');
+  if(!a.slots.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:6px 0">No slots in this area.</div>';return;}
+  const byA=a.slots.filter(s=>s.side==='A'),byB=a.slots.filter(s=>s.side==='B');
+  const renderRow=s=>`<div class="slot-mgr-row">
+    <span class="slot-mgr-id">${s.id}</span>
+    <span class="slot-mgr-side">${s.side==='A'?a.sideALabel:a.sideBLabel}</span>
+    <span style="flex:1;font-size:11px;color:${s.status==='free'?'#2d7a1f':s.status==='occ'?'var(--danger)':'var(--warn)'}">${s.status==='free'?'Free':s.status==='occ'?s.plate:'Reserved: '+s.plate}</span>
+    ${s.status==='free'?`<button class="del-hour-btn" onclick="removeSlot('${areaId}','${s.id}')">✕</button>`:'<span style="font-size:10px;color:var(--muted)">In use</span>'}
+  </div>`;
+  el.innerHTML=(byA.length?`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:4px 0 3px">${a.sideALabel} Side</div>`+byA.map(renderRow).join(''):'')+(byB.length?`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:8px 0 3px">${a.sideBLabel} Side</div>`+byB.map(renderRow).join(''):'');
+}
+
+function removeSlot(areaId,slotId){
+  const a=areas.find(x=>x.id===areaId);if(!a)return;
+  const s=a.slots.find(x=>x.id===slotId);
+  if(!s){toast('Slot not found');return;}
+  if(s.status!=='free'){toast('Cannot remove — slot is in use');return;}
+  a.slots=a.slots.filter(x=>x.id!==slotId);
+  renderSlotManager();renderAreaTabs();if(currentAreaId===areaId)renderFloorplan();toast('Slot '+slotId+' removed');
+  saveConfig();
+}
+
+function addSlotToArea(){
+  const areaId=document.getElementById('slot-mgr-area').value;
+  const side=document.getElementById('slot-add-side').value;
+  const a=areas.find(x=>x.id===areaId);if(!a)return;
+  const existing=a.slots.filter(s=>s.side===side);
+  const num=existing.length+1;
+  const prefix=side==='A'?'A':'B';
+  const id=prefix+num+'-'+areaId.slice(-4);
+  a.slots.push({id,area:areaId,side,num,status:'free',plate:'',type:'',since:null});
+  renderSlotManager();if(currentAreaId===areaId)renderFloorplan();toast('Slot '+id+' added');
+  saveConfig();
+}
+
+// ══════════════════════════════════════════════════════
+// ROLE / NAVIGATION
+// ══════════════════════════════════════════════════════
+function openAdminLogin(){
+  if(role==='admin'){logoutAdmin();return;}
+  const modal=document.getElementById('admin-modal');
+  modal.style.display='flex';
+  document.getElementById('adm-user').value='';
+  document.getElementById('adm-pass').value='';
+  document.getElementById('adm-err').style.display='none';
+  setTimeout(()=>document.getElementById('adm-user').focus(),100);
+}
+function closeAdminLogin(){
+  document.getElementById('admin-modal').style.display='none';
+}
+function submitAdminLogin(){
+  const u=document.getElementById('adm-user').value.trim();
+  const p=document.getElementById('adm-pass').value;
+  if(u==='admin'&&p==='admin123'){
+    closeAdminLogin();
+    role='admin';
+    const btn=document.getElementById('role-btn');
+    const sub=document.getElementById('top-sub');
+    const a=currentArea();const loc=a?a.name:'';
+    btn.textContent='Owner/Admin';btn.className='role-btn admin';
+    sub.textContent=loc+' — Admin View';
+    document.getElementById('tab-admin-btn').style.display='';
+    document.getElementById('tab-cashiers-btn').style.display='';
+    document.getElementById('tab-rates-btn').style.display='';
+    document.getElementById('tab-settings-btn').style.display='';
+    toast('Welcome, Admin!');
+  } else {
+    document.getElementById('adm-err').style.display='block';
+    document.getElementById('adm-pass').value='';
+    document.getElementById('adm-pass').focus();
+  }
+}
+function logoutAdmin(){
+  role='cashier';
+  const btn=document.getElementById('role-btn');
+  const sub=document.getElementById('top-sub');
+  const a=currentArea();const loc=a?a.name:'';
+  btn.textContent='Cashier';btn.className='role-btn cashier';
+  sub.textContent=loc+' — Cashier View';
+  document.getElementById('tab-admin-btn').style.display='none';
+  document.getElementById('tab-cashiers-btn').style.display='none';
+  document.getElementById('tab-rates-btn').style.display='none';
+  document.getElementById('tab-settings-btn').style.display='none';
+  sw('floorplan',document.querySelectorAll('.tab')[0]);
+  toast('Logged out.');
+}
+
+function sw(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('tab-'+name).classList.add('active');
+  if(name==='floorplan')renderFloorplan();
+  if(name==='log')renderLog();
+  if(name==='rates')buildRatesEditor();
+  if(name==='cashiers')renderCashiers();
+  if(name==='admin')renderAdmin();
+  if(name==='settings'){
+    renderAreaList();
+    // Sync biz-name/loc with current saved values
+    const bn=document.getElementById('biz-name');
+    const bl=document.getElementById('biz-loc');
+    if(bn)bn.value=bizName;
+    if(bl)bl.value=bizLoc;
+  }
+  if(name==='cashier'){
+    updateDutyBanner();
+    updateOnDutyWidget();
+  }
+}
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+
+// ══════════════════════════════════════════════════════
+// PWA
+// ══════════════════════════════════════════════════════
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install-bar').classList.add('show');});
+async function installPWA(){if(!deferredPrompt)return;deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('install-bar').classList.remove('show');if(outcome==='accepted')toast('ACI Parking installed!');}
+window.addEventListener('appinstalled',()=>{document.getElementById('install-bar').classList.remove('show');toast('Installed on your device!');});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+// ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// TRUNCATE DATA
+// ══════════════════════════════════════════════════════
+function openTruncateModal(){
+  const m=document.getElementById('truncate-modal');
+  m.style.display='flex';
+  document.getElementById('trunc-pass').value='';
+  document.getElementById('trunc-err').style.display='none';
+  setTimeout(()=>document.getElementById('trunc-pass').focus(),100);
+}
+function closeTruncateModal(){
+  document.getElementById('truncate-modal').style.display='none';
+}
+function submitTruncate(){
+  const p=document.getElementById('trunc-pass').value;
+  if(p!=='@dm!n'){
+    document.getElementById('trunc-err').style.display='block';
+    document.getElementById('trunc-pass').value='';
+    document.getElementById('trunc-pass').focus();
+    return;
+  }
+  // Clear all data
+  areas.forEach(a=>a.slots.forEach(s=>{s.status='free';s.plate='';s.type='';s.since=null;s.ticket=null;}));
+  txLog=[];
+  sessions={};
+  closeTruncateModal();
+  renderFloorplan();
+  renderLog();
+  renderAdmin();
+  saveConfig();
+  toast('All data truncated. Slots reset.');
+}
+
+// ══════════════════════════════════════════════════════
+// DUTY START — ticket series
+// ══════════════════════════════════════════════════════
+let dutyTickets={pv:'',sr:'',pvCount:0,srCount:0,cashierOnDuty:''};
+
+function openDutyModal(){
+  const m=document.getElementById('duty-modal');
+  m.style.display='flex';
+  // Populate staff picker
+  const pick=document.getElementById('duty-staff-pick');
+  pick.innerHTML='<option value="">— Select from staff list —</option>';
+  cashiers.forEach((c,i)=>{
+    const opt=document.createElement('option');
+    opt.value=i;
+    const onDuty=isOnDutyNow(c);
+    opt.textContent=c.name+' ('+c.role+(onDuty?' · ON DUTY':'')+')'+(c.shift?' · '+c.shift:'');
+    if(onDuty)opt.style.fontWeight='700';
+    pick.appendChild(opt);
+  });
+  pick.value='';
+  document.getElementById('duty-pv').value=dutyTickets.pv;
+  document.getElementById('duty-sr').value=dutyTickets.sr;
+  document.getElementById('duty-name').value=dutyTickets.cashierOnDuty;
+  setTimeout(()=>pick.focus(),100);
+}
+function onDutyStaffPick(){
+  const pick=document.getElementById('duty-staff-pick');
+  if(pick.value==='')return;
+  const c=cashiers[parseInt(pick.value)];
+  if(c)document.getElementById('duty-name').value=c.name;
+}
+function updateOnDutyWidget(){
+  const listEl=document.getElementById('on-duty-list');
+  const timeEl=document.getElementById('on-duty-time');
+  if(!listEl)return;
+  const now=new Date();
+  if(timeEl){
+    const hh=String(now.getHours()).padStart(2,'0'),mm=String(now.getMinutes()).padStart(2,'0');
+    timeEl.textContent=hh+':'+mm;
+  }
+  const onDutyNow=cashiers.filter(c=>isOnDutyNow(c));
+  if(!onDutyNow.length){
+    listEl.innerHTML='<div style="font-size:11px;color:var(--muted);padding:4px 0;font-style:italic">No staff on duty at this time</div>';
+    return;
+  }
+  listEl.innerHTML=onDutyNow.map(c=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid var(--border)">
+      <div style="width:28px;height:28px;border-radius:50%;background:#1d9e75;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">${c.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">${c.name}</div>
+        <div style="font-size:10px;color:var(--muted)">${c.role} · ${c.shift||''} <span style="color:var(--blue);font-weight:600">${fmtShiftTime(c)}</span></div>
+      </div>
+      <span style="font-size:9px;background:#eaf7f1;color:#1d9e75;border-radius:20px;padding:2px 7px;font-weight:700;flex-shrink:0">ON DUTY</span>
+    </div>`).join('');
+}
+function closeDutyModal(){
+  document.getElementById('duty-modal').style.display='none';
+}
+function startDuty(){
+  const pv=document.getElementById('duty-pv').value.trim().toUpperCase();
+  const sr=document.getElementById('duty-sr').value.trim().toUpperCase();
+  const name=document.getElementById('duty-name').value.trim();
+  dutyTickets.pv=pv; dutyTickets.sr=sr;
+  dutyTickets.pvCount=0; dutyTickets.srCount=0;
+  dutyTickets.cashierOnDuty=name;
+  closeDutyModal();
+  updateDutyBanner();
+  // Pre-fill ticket field with first PV ticket
+  autoFillTicket();
+  toast('Duty started'+(name?' — '+name:'')+'!');
+}
+function updateDutyBanner(){
+  const txt=document.getElementById('duty-status-text');
+  const disp=document.getElementById('duty-series-display');
+  if(!txt||!disp)return;
+  if(dutyTickets.pv||dutyTickets.sr){
+    txt.textContent=dutyTickets.cashierOnDuty?'On Duty: '+dutyTickets.cashierOnDuty:'Duty Active';
+    const pvNext=nextTicket('pv');
+    const srNext=nextTicket('sr');
+    disp.textContent='PV: '+pvNext+(dutyTickets.sr?' · SR: '+srNext:'');
+  } else {
+    txt.textContent='Set Starting Ticket Series';
+    disp.textContent='Tap to configure before duty starts';
+  }
+}
+function nextTicket(type){
+  const base=type==='pv'?dutyTickets.pv:dutyTickets.sr;
+  if(!base)return'—';
+  const count=type==='pv'?dutyTickets.pvCount:dutyTickets.srCount;
+  // Try to increment the trailing numeric part
+  const match=base.match(/^(.*?)(\d+)$/);
+  if(match){
+    const prefix=match[1];
+    const num=parseInt(match[2],10)+count;
+    const padded=String(num).padStart(match[2].length,'0');
+    return prefix+padded;
+  }
+  return base+(count>0?'-'+String(count+1).padStart(3,'0'):'');
+}
+function autoFillTicket(){
+  const typeEl=document.getElementById('ci-type');
+  const ticketEl=document.getElementById('ci-ticket');
+  if(!typeEl||!ticketEl)return;
+  const t=typeEl.value;
+  if(t==='Private Vehicle'&&dutyTickets.pv){
+    ticketEl.value=nextTicket('pv');
+  } else if(t==='QC Senior'&&dutyTickets.sr){
+    ticketEl.value=nextTicket('sr');
+  }
+}
+function consumeTicket(type){
+  if(type==='Private Vehicle')dutyTickets.pvCount++;
+  else if(type==='QC Senior')dutyTickets.srCount++;
+  updateDutyBanner();
+}
+
+// ══════════════════════════════════════════════════════
+// PERSISTENCE — localStorage + JSON export/import
+// ══════════════════════════════════════════════════════
+const LS_KEY = 'parksmartSettings_v1';
+
+function saveToLS(){
+  try{
+    const payload={
+      bizName, bizLoc,
+      rates, VEHICLE_TYPES,
+      cashiers,
+      areas: areas.map(a=>({
+        id:a.id, name:a.name,
+        sideALabel:a.sideALabel, sideBLabel:a.sideBLabel,
+        slots: a.slots.map(s=>({
+          id:s.id, area:s.area, side:s.side, num:s.num,
+          status:s.status, plate:s.plate, type:s.type,
+          since:s.since, ticket:s.ticket||null
+        }))
+      })),
+      currentAreaId,
+      savedAt: Date.now()
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(payload));
+    updateLSSavedLabel(payload.savedAt);
+  }catch(e){console.warn('LS save failed',e);}
+}
+
+// ── Firebase-aware save helpers ──────────────────────
+// saveConfig() = admin changes (rates, staff, areas, biz info)
+function saveConfig(){
+  if(window.fbSaveConfig) window.fbSaveConfig();
+  else saveToLS();
+}
+// saveLive() = slot state changes (check-in / check-out / reserve / truncate)
+function saveLive(){
+  if(window.fbSaveLive) window.fbSaveLive();
+  else saveToLS();
+}
+// pushLog(entry) = append a tx log entry to Firebase
+function pushLog(entry){
+  if(window.fbPushLog) window.fbPushLog({...entry, ts: Date.now()});
+}
+
+function loadFromLS(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(!raw)return false;
+    const d=JSON.parse(raw);
+    if(d.bizName)bizName=d.bizName;
+    if(d.bizLoc)bizLoc=d.bizLoc;
+    if(d.rates)Object.assign(rates,d.rates);
+    if(d.VEHICLE_TYPES&&d.VEHICLE_TYPES.length)VEHICLE_TYPES.length=0,d.VEHICLE_TYPES.forEach(t=>VEHICLE_TYPES.push(t));
+    if(d.cashiers&&d.cashiers.length)cashiers.length=0,d.cashiers.forEach(c=>cashiers.push(c));
+    if(d.areas&&d.areas.length){
+      areas.length=0;
+      d.areas.forEach(a=>areas.push(a));
+    }
+    if(d.currentAreaId)currentAreaId=d.currentAreaId;
+    if(d.savedAt)updateLSSavedLabel(d.savedAt);
+    return true;
+  }catch(e){console.warn('LS load failed',e);return false;}
+}
+
+function updateLSSavedLabel(ts){
+  const el=document.getElementById('ls-last-saved');
+  if(!el)return;
+  const d=new Date(ts);
+  el.textContent='Last saved: '+d.toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+function exportSettings(){
+  const payload={
+    _note:'ACI ParkSmart settings export — import this on any device to restore configuration',
+    bizName, bizLoc,
+    rates, VEHICLE_TYPES,
+    cashiers,
+    areas: areas.map(a=>({id:a.id,name:a.name,sideALabel:a.sideALabel,sideBLabel:a.sideBLabel,
+      slots:a.slots.map(s=>({id:s.id,area:s.area,side:s.side,num:s.num,status:'free',plate:'',type:'',since:null,ticket:null}))})),
+    currentAreaId,
+    exportedAt: new Date().toISOString()
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='parksmart-settings.json';a.click();
+  URL.revokeObjectURL(url);
+  toast('Settings exported ✓');
+}
+
+function importSettings(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const d=JSON.parse(e.target.result);
+      if(d.bizName)bizName=d.bizName;
+      if(d.bizLoc)bizLoc=d.bizLoc;
+      if(d.rates)Object.assign(rates,d.rates);
+      if(d.VEHICLE_TYPES&&d.VEHICLE_TYPES.length){VEHICLE_TYPES.length=0;d.VEHICLE_TYPES.forEach(t=>VEHICLE_TYPES.push(t));}
+      if(d.cashiers&&d.cashiers.length){cashiers.length=0;d.cashiers.forEach(c=>cashiers.push(c));}
+      if(d.areas&&d.areas.length){areas.length=0;d.areas.forEach(a=>areas.push(a));}
+      if(d.currentAreaId)currentAreaId=d.currentAreaId;
+      saveConfig();
+      // Refresh all UI
+      const bnEl=document.getElementById('biz-name'),blEl=document.getElementById('biz-loc');
+      if(bnEl)bnEl.value=bizName;if(blEl)blEl.value=bizLoc;
+      const hdr=document.getElementById('hdr-biz-name');if(hdr)hdr.textContent=bizName;
+      buildRatesEditor();renderCashiers();renderAreaList();renderAreaTabs();renderFloorplan();refreshSlotDropdown();
+      toast('Settings imported ✓ — all data restored');
+    }catch(err){toast('Import failed — invalid file');}
+    ev.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+function clearLocalStorage(){
+  if(!confirm('Clear all saved data and reset to defaults?'))return;
+  localStorage.removeItem(LS_KEY);
+  location.reload();
+}
+
+// ══════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════
+loadFromLS();
+switchArea(currentAreaId||'area-1');
+// Apply loaded biz info to header
+(function(){
+  const hdr=document.getElementById('hdr-biz-name');if(hdr)hdr.textContent=bizName;
+  const bnEl=document.getElementById('biz-name'),blEl=document.getElementById('biz-loc');
+  if(bnEl)bnEl.value=bizName;if(blEl)blEl.value=bizLoc;
+})();
+renderLog();
+buildRatesEditor();
+
+// ── Live clock ──────────────────────────────────────
+function tickClock(){
+  const now=new Date();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  const ss=String(now.getSeconds()).padStart(2,'0');
+  const timeEl=document.getElementById('clock-time');
+  const dateEl=document.getElementById('clock-date');
+  if(timeEl)timeEl.textContent=hh+':'+mm+':'+ss;
+  if(dateEl){
+    const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    dateEl.textContent=days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+  }
+}
+tickClock();
+setInterval(tickClock,1000);
+updateOnDutyWidget();
+setInterval(updateOnDutyWidget,60000);
+
+// ══════════════════════════════════════════════════════
+// EXPOSE GLOBALS FOR FIREBASE MODULE
+// ══════════════════════════════════════════════════════
+window.bizName          = bizName;
+window.bizLoc           = bizLoc;
+window.rates            = rates;
+window.VEHICLE_TYPES    = VEHICLE_TYPES;
+window.cashiers         = cashiers;
+window.areas            = areas;
+window.currentAreaId    = currentAreaId;
+window.txLog            = txLog;
+window.sessions         = sessions;
+window.saveToLS         = saveToLS;
+window.buildRatesEditor = buildRatesEditor;
+window.renderCashiers   = renderCashiers;
+window.renderAreaList   = renderAreaList;
+window.renderAreaTabs   = renderAreaTabs;
+window.renderFloorplan  = renderFloorplan;
+window.refreshSlotDropdown = refreshSlotDropdown;
+window.renderAdmin      = renderAdmin;
+window.renderLog        = renderLog;
+window.updateOnDutyWidget = updateOnDutyWidget;
+</script>
+</body>
+</html>
