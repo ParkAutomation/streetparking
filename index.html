@@ -642,6 +642,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
+// Firebase is now loaded synchronously above — safe to use immediately
 (function(){
   firebase.initializeApp({
     apiKey:            "AIzaSyBJo3FiaGEdyFXnAPsAQkV3wNDpJKQaF4k",
@@ -654,34 +655,31 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
   });
   const db = firebase.database();
 
-  // ── Sync dot ─────────────────────────────────────────
   function setSyncStatus(state){
-    const dot=document.getElementById('fb-dot'), lbl=document.getElementById('fb-lbl');
-    if(!dot||!lbl) return;
+    const dot=document.getElementById('fb-dot'),lbl=document.getElementById('fb-lbl');
+    if(!dot||!lbl)return;
     const m={syncing:['#f5a623','Syncing…'],ok:['#1d9e75','Live ✓'],err:['#a32d2d','Offline']};
     const [c,t]=m[state]||m.ok; dot.style.background=c; lbl.textContent=t;
   }
   window._setSyncStatus = setSyncStatus;
 
-  // Shows Live/Offline the moment Firebase connects or disconnects
+  // Live connection indicator
   db.ref('.info/connected').on('value', snap => setSyncStatus(snap.val()?'ok':'err'));
 
-  // ── Save helpers ─────────────────────────────────────
+  // Save helpers
   window.fbSaveConfig = function(){
     setSyncStatus('syncing');
-    const payload={
-      bizName:window.bizName, bizLoc:window.bizLoc,
-      rates:window.rates, VEHICLE_TYPES:window.VEHICLE_TYPES, cashiers:window.cashiers,
-      areas:window.areas.map(a=>({
-        id:a.id,name:a.name,sideALabel:a.sideALabel,sideBLabel:a.sideBLabel,
+    const p={
+      bizName:window.bizName,bizLoc:window.bizLoc,
+      rates:window.rates,VEHICLE_TYPES:window.VEHICLE_TYPES,cashiers:window.cashiers,
+      areas:window.areas.map(a=>({id:a.id,name:a.name,sideALabel:a.sideALabel,sideBLabel:a.sideBLabel,
         slots:a.slots.map(s=>({id:s.id,area:s.area,side:s.side,num:s.num,
-          status:s.status,plate:s.plate||'',type:s.type||'',since:s.since||null,ticket:s.ticket||null}))
-      })),
-      currentAreaId:window.currentAreaId, savedAt:Date.now()
+          status:s.status,plate:s.plate||'',type:s.type||'',since:s.since||null,ticket:s.ticket||null}))})),
+      currentAreaId:window.currentAreaId,savedAt:Date.now()
     };
-    db.ref('parking/config').set(payload)
-      .then(()=>{ setSyncStatus('ok'); window.saveToLS&&window.saveToLS(); })
-      .catch(e=>{ console.warn('FB config save failed',e); setSyncStatus('err'); window.saveToLS&&window.saveToLS(); });
+    db.ref('parking/config').set(p)
+      .then(()=>{setSyncStatus('ok');window.saveToLS&&window.saveToLS();})
+      .catch(e=>{console.warn('FB config save failed',e);setSyncStatus('err');window.saveToLS&&window.saveToLS();});
   };
 
   window.fbSaveLive = function(){
@@ -691,8 +689,8 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       live[s.id]={status:s.status,plate:s.plate||'',type:s.type||'',since:s.since||null,ticket:s.ticket||null,area:a.id};
     }));
     db.ref('parking/live').set(live)
-      .then(()=>{ setSyncStatus('ok'); window.saveToLS&&window.saveToLS(); })
-      .catch(e=>{ console.warn('FB live save failed',e); setSyncStatus('err'); window.saveToLS&&window.saveToLS(); });
+      .then(()=>{setSyncStatus('ok');window.saveToLS&&window.saveToLS();})
+      .catch(e=>{console.warn('FB live save failed',e);setSyncStatus('err');window.saveToLS&&window.saveToLS();});
   };
 
   window.fbPushLog = function(entry){
@@ -700,46 +698,55 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       .catch(e=>console.warn('FB log push failed',e));
   };
 
-  // ── Listeners (called after main script exposes globals) ─
+  // Called after main script exposes all window.* globals
   window._fbStartListeners = function(){
     db.ref('parking/config').on('value', snap=>{
-      const d=snap.val(); if(!d) return;
+      const d=snap.val();if(!d)return;
       try{
-        if(d.bizName) window.bizName=d.bizName;
-        if(d.bizLoc)  window.bizLoc=d.bizLoc;
-        if(d.rates)   Object.assign(window.rates,d.rates);
-        if(d.VEHICLE_TYPES&&d.VEHICLE_TYPES.length){ window.VEHICLE_TYPES.length=0; d.VEHICLE_TYPES.forEach(t=>window.VEHICLE_TYPES.push(t)); }
-        if(d.cashiers&&d.cashiers.length){ window.cashiers.length=0; d.cashiers.forEach(c=>window.cashiers.push(c)); }
+        if(d.bizName)window.bizName=d.bizName;
+        if(d.bizLoc)window.bizLoc=d.bizLoc;
+        if(d.rates)Object.assign(window.rates,d.rates);
+        if(d.VEHICLE_TYPES&&d.VEHICLE_TYPES.length){window.VEHICLE_TYPES.length=0;d.VEHICLE_TYPES.forEach(t=>window.VEHICLE_TYPES.push(t));}
+        if(d.cashiers&&d.cashiers.length){window.cashiers.length=0;d.cashiers.forEach(c=>window.cashiers.push(c));}
         if(d.areas&&d.areas.length){
-          const lm={}; window.areas.forEach(a=>a.slots.forEach(s=>{lm[s.id]=s;}));
+          const lm={};window.areas.forEach(a=>a.slots.forEach(s=>{lm[s.id]=s;}));
           window.areas.length=0;
-          d.areas.forEach(a=>{ a.slots=a.slots.map(s=>lm[s.id]?{...s,status:lm[s.id].status,plate:lm[s.id].plate,type:lm[s.id].type,since:lm[s.id].since,ticket:lm[s.id].ticket}:s); window.areas.push(a); });
-          if(d.currentAreaId) window.currentAreaId=d.currentAreaId;
+          d.areas.forEach(a=>{
+            a.slots=a.slots.map(s=>lm[s.id]?{...s,status:lm[s.id].status,plate:lm[s.id].plate,
+              type:lm[s.id].type,since:lm[s.id].since,ticket:lm[s.id].ticket}:s);
+            window.areas.push(a);
+          });
+          if(d.currentAreaId)window.currentAreaId=d.currentAreaId;
         }
-        const hdr=document.getElementById('hdr-biz-name'); if(hdr) hdr.textContent=window.bizName;
+        const hdr=document.getElementById('hdr-biz-name');if(hdr)hdr.textContent=window.bizName;
         const bn=document.getElementById('biz-name'),bl=document.getElementById('biz-loc');
-        if(bn) bn.value=window.bizName; if(bl) bl.value=window.bizLoc;
-        ['buildRatesEditor','renderCashiers','renderAreaList','renderAreaTabs','renderFloorplan','refreshSlotDropdown','updateOnDutyWidget']
-          .forEach(fn=>{ if(typeof window[fn]==='function') window[fn](); });
-      }catch(e){ console.warn('FB config apply error',e); }
-    }, e=>{ console.warn('FB config error',e); setSyncStatus('err'); });
+        if(bn)bn.value=window.bizName;if(bl)bl.value=window.bizLoc;
+        ['buildRatesEditor','renderCashiers','renderAreaList','renderAreaTabs',
+         'renderFloorplan','refreshSlotDropdown','updateOnDutyWidget']
+          .forEach(fn=>{if(typeof window[fn]==='function')window[fn]();});
+      }catch(e){console.warn('FB config apply error',e);}
+    },e=>{console.warn('FB config error',e);setSyncStatus('err');});
 
     db.ref('parking/live').on('value', snap=>{
-      const d=snap.val(); if(!d) return;
+      const d=snap.val();if(!d)return;
       try{
-        window.areas.forEach(a=>a.slots.forEach(s=>{ if(d[s.id]){ s.status=d[s.id].status||'free'; s.plate=d[s.id].plate||''; s.type=d[s.id].type||''; s.since=d[s.id].since||null; s.ticket=d[s.id].ticket||null; } }));
-        ['renderFloorplan','refreshSlotDropdown','renderAdmin'].forEach(fn=>{ if(typeof window[fn]==='function') window[fn](); });
-      }catch(e){ console.warn('FB live apply error',e); }
-    }, e=>{ console.warn('FB live error',e); setSyncStatus('err'); });
+        window.areas.forEach(a=>a.slots.forEach(s=>{
+          if(d[s.id]){s.status=d[s.id].status||'free';s.plate=d[s.id].plate||'';
+            s.type=d[s.id].type||'';s.since=d[s.id].since||null;s.ticket=d[s.id].ticket||null;}
+        }));
+        ['renderFloorplan','refreshSlotDropdown','renderAdmin']
+          .forEach(fn=>{if(typeof window[fn]==='function')window[fn]();});
+      }catch(e){console.warn('FB live apply error',e);}
+    },e=>{console.warn('FB live error',e);setSyncStatus('err');});
 
     db.ref('parking/txLog').on('value', snap=>{
-      const d=snap.val(); if(!d) return;
+      const d=snap.val();if(!d)return;
       try{
         window.txLog.length=0;
         Object.values(d).sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(e=>window.txLog.push(e));
-        ['renderLog','renderAdmin'].forEach(fn=>{ if(typeof window[fn]==='function') window[fn](); });
-      }catch(e){ console.warn('FB txLog apply error',e); }
-    }, e=>{ console.warn('FB txLog error',e); setSyncStatus('err'); });
+        ['renderLog','renderAdmin'].forEach(fn=>{if(typeof window[fn]==='function')window[fn]();});
+      }catch(e){console.warn('FB txLog apply error',e);}
+    },e=>{console.warn('FB txLog error',e);setSyncStatus('err');});
   };
 })();
 </script>
@@ -1944,7 +1951,7 @@ window.renderAdmin      = renderAdmin;
 window.renderLog        = renderLog;
 window.updateOnDutyWidget = updateOnDutyWidget;
 
-// Start Firebase real-time listeners now that all globals are exposed
+// Start Firebase listeners now that all globals are ready
 if(typeof window._fbStartListeners==='function') window._fbStartListeners();
 </script>
 </body>
