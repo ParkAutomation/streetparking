@@ -1842,7 +1842,28 @@ let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install-bar').classList.add('show');});
 async function installPWA(){if(!deferredPrompt)return;deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('install-bar').classList.remove('show');if(outcome==='accepted')toast('ACI Parking installed!');}
 window.addEventListener('appinstalled',()=>{document.getElementById('install-bar').classList.remove('show');toast('Installed on your device!');});
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+// ── Service Worker: force update on new deploy ──────────────────
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').then(reg=>{
+    // Check for updates every time the page loads
+    reg.update();
+    // When a new SW is waiting, reload all clients immediately
+    reg.addEventListener('updatefound',()=>{
+      const newWorker=reg.installing;
+      newWorker.addEventListener('statechange',()=>{
+        if(newWorker.state==='installed'&&navigator.serviceWorker.controller){
+          // New version available — skip waiting and reload
+          newWorker.postMessage({type:'SKIP_WAITING'});
+        }
+      });
+    });
+  }).catch(()=>{});
+  // When SW controller changes (new SW took over), reload the page
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!refreshing){ refreshing=true; window.location.reload(); }
+  });
+}
 
 // ══════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════
