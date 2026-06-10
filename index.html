@@ -804,7 +804,9 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
     });
 
     // ── Listen: CONFIG ───────────────────────────────────
-    onValue(ref(db,'parking/config'), snap => {
+    // On first fire, also fetch live slots inline to avoid race condition
+    let _configFirstFire = true;
+    onValue(ref(db,'parking/config'), async snap => {
       const d = snap.val();
       if(!d) return;
       try{
@@ -820,19 +822,31 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
           d.cashiers.forEach(c => window.cashiers.push(c));
         }
         if(d.areas && d.areas.length){
-          // Merge areas: keep live slot state, update structure from config
+          // On first fire: fetch live slots synchronously so areas have correct status
+          let liveSnap = null;
+          if(_configFirstFire){
+            _configFirstFire = false;
+            try{ liveSnap = await get(ref(db,'parking/live')); }catch(_){}
+          }
+          const liveData = liveSnap ? (liveSnap.val()||{}) : {};
+          // Also merge from current in-memory slots as fallback
           const liveMap={};
           window.areas.forEach(a=>a.slots.forEach(s=>{ liveMap[s.id]=s; }));
+          // liveData from Firebase takes priority over in-memory
           window.areas.length=0;
           d.areas.forEach(a=>{
-            a.slots = a.slots.map(s => liveMap[s.id]
-              ? {...s, status:liveMap[s.id].status, plate:liveMap[s.id].plate,
-                       type:liveMap[s.id].type, since:liveMap[s.id].since, ticket:liveMap[s.id].ticket}
-              : s);
+            a.slots = a.slots.map(s => {
+              const fb = liveData[s.id];
+              const mem = liveMap[s.id];
+              if(fb) return {...s, status:fb.status||'free', plate:fb.plate||'', type:fb.type||'', since:fb.since||null, ticket:fb.ticket||null};
+              if(mem) return {...s, status:mem.status, plate:mem.plate, type:mem.type, since:mem.since, ticket:mem.ticket};
+              return s;
+            });
             window.areas.push(a);
           });
           if(d.currentAreaId) window.currentAreaId = d.currentAreaId;
         }
+        window._fbBootDone = true;
         // Refresh UI
         const hdr=document.getElementById('hdr-biz-name');if(hdr)hdr.textContent=window.bizName;
         const bnEl=document.getElementById('biz-name'),blEl=document.getElementById('biz-loc');
@@ -871,14 +885,14 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 
     // ── Listen: TX LOG ───────────────────────────────────
     onValue(ref(db,'parking/txLog'), snap => {
-      const d = snap.val();
-      if(!d) return;
       try{
         window.txLog.length=0;
-        // Firebase stores as object keyed by push-id; sort by time desc
-        Object.values(d)
-          .sort((a,b)=>(b.ts||0)-(a.ts||0))
-          .forEach(e=>window.txLog.push(e));
+        const d = snap.val();
+        if(d){
+          Object.values(d)
+            .sort((a,b)=>(b.ts||0)-(a.ts||0))
+            .forEach(e=>window.txLog.push(e));
+        }
         if(typeof window.renderLog==='function')   window.renderLog();
         if(typeof window.renderAdmin==='function') window.renderAdmin();
       }catch(e){ console.warn('FB txLog apply error',e); }
@@ -2099,6 +2113,10 @@ function clearLocalStorage(){
 // ══════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════
+// 1. Load from localStorage immediately for fast first render
+// 2. Firebase onValue listeners will overwrite this once connected
+//    (window._fbBootDone prevents LS from re-running after FB has loaded)
+window._fbBootDone = false;
 loadFromLS();
 switchArea(currentAreaId||'area-1');
 // Apply loaded biz info to header
@@ -2333,15 +2351,15 @@ function cashierLogout(){
 
 // ══════════════════════════════════════════════════════
 // EXPOSE GLOBALS FOR FIREBASE MODULE
-// bizName/bizLoc use getters so Firebase always reads the live value
+// Primitives use getters/setters so Firebase module always reads/writes live values
 // ══════════════════════════════════════════════════════
 Object.defineProperty(window,'bizName',{get:()=>bizName,set:v=>{bizName=v;},configurable:true,enumerable:true});
 Object.defineProperty(window,'bizLoc', {get:()=>bizLoc, set:v=>{bizLoc=v;}, configurable:true,enumerable:true});
+Object.defineProperty(window,'currentAreaId',{get:()=>currentAreaId,set:v=>{currentAreaId=v;},configurable:true,enumerable:true});
 window.rates            = rates;
 window.VEHICLE_TYPES    = VEHICLE_TYPES;
 window.cashiers         = cashiers;
 window.areas            = areas;
-window.currentAreaId    = currentAreaId;
 window.txLog            = txLog;
 window.sessions         = sessions;
 window.saveToLS         = saveToLS;
