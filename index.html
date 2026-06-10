@@ -864,18 +864,26 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 
     // ── Listen: LIVE SLOTS ───────────────────────────────
     onValue(ref(db,'parking/live'), snap => {
-      const d = snap.val();
-      if(!d) return;
       try{
-        window.areas.forEach(a => a.slots.forEach(s => {
-          if(d[s.id]){
-            s.status = d[s.id].status || 'free';
-            s.plate  = d[s.id].plate  || '';
-            s.type   = d[s.id].type   || '';
-            s.since  = d[s.id].since  || null;
-            s.ticket = d[s.id].ticket || null;
-          }
-        }));
+        const d = snap.val();
+        if(!d){
+          // null = truncate signal → reset every slot to free
+          window.areas.forEach(a=>a.slots.forEach(s=>{
+            s.status='free'; s.plate=''; s.type=''; s.since=null; s.ticket=null;
+          }));
+        } else {
+          // Apply only slots that exist in Firebase live data
+          window.areas.forEach(a=>a.slots.forEach(s=>{
+            if(d[s.id]){
+              s.status = d[s.id].status || 'free';
+              s.plate  = d[s.id].plate  || '';
+              s.type   = d[s.id].type   || '';
+              s.since  = d[s.id].since  || null;
+              s.ticket = d[s.id].ticket || null;
+            }
+            // slots not in d: leave as-is (config listener already set them)
+          }));
+        }
         if(typeof window.renderFloorplan==='function')    window.renderFloorplan();
         if(typeof window.refreshSlotDropdown==='function')window.refreshSlotDropdown();
         if(typeof window.renderAdmin==='function')        window.renderAdmin();
@@ -1858,15 +1866,33 @@ function submitTruncate(){
     document.getElementById('trunc-pass').focus();
     return;
   }
-  // Clear all data
-  areas.forEach(a=>a.slots.forEach(s=>{s.status='free';s.plate='';s.type='';s.since=null;s.ticket=null;}));
-  txLog=[];
+  // Reset all slots to free
+  areas.forEach(a=>a.slots.forEach(s=>{
+    s.status='free'; s.plate=''; s.type=''; s.since=null; s.ticket=null;
+  }));
+  // Clear txLog in-place so window.txLog reference stays valid
+  txLog.length=0;
   sessions={};
   closeTruncateModal();
   renderFloorplan();
   renderLog();
   renderAdmin();
-  saveConfig();
+  // Write cleared state to Firebase (both live slots AND txLog)
+  if(window._fbReady && window._fb){
+    const {db,ref,set,remove}=window._fb;
+    // Write all slots as free to parking/live
+    const liveSlots={};
+    areas.forEach(a=>a.slots.forEach(s=>{
+      liveSlots[s.id]={status:'free',plate:'',type:'',since:null,ticket:null,area:a.id};
+    }));
+    set(ref(db,'parking/live'), liveSlots).catch(e=>console.warn('Truncate live failed',e));
+    // Delete entire txLog node so listeners get null (handled below)
+    remove(ref(db,'parking/txLog')).catch(e=>console.warn('Truncate txLog failed',e));
+  } else {
+    // Offline: save to LS only
+    saveLive();
+    saveConfig();
+  }
   toast('All data truncated. Slots reset.');
 }
 
@@ -2018,9 +2044,12 @@ function saveToLS(){
 
 // ── Firebase-aware save helpers ──────────────────────
 // saveConfig() = admin changes (rates, staff, areas, biz info)
+// Always also writes live slot state so parking/live stays in sync
 function saveConfig(){
   if(window.fbSaveConfig) window.fbSaveConfig();
   else saveToLS();
+  // Keep parking/live in sync with current slot states
+  if(window.fbSaveLive) window.fbSaveLive();
 }
 // saveLive() = slot state changes (check-in / check-out / reserve / truncate)
 function saveLive(){
