@@ -281,6 +281,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
     <div class="tab active" onclick="sw('floorplan',this)"><i class="ti ti-layout-grid"></i> Map</div>
     <div class="tab" onclick="sw('cashier',this)"><i class="ti ti-receipt"></i> Cashier</div>
     <div class="tab" onclick="sw('log',this)"><i class="ti ti-list"></i> Log</div>
+    <div class="tab" onclick="sw('report',this)"><i class="ti ti-chart-bar"></i> Report</div>
     <div class="tab" style="display:none" id="tab-rates-btn" onclick="sw('rates',this)"><i class="ti ti-currency-peso"></i> Rates</div>
     <div class="tab" style="display:none" id="tab-cashiers-btn" onclick="sw('cashiers',this)"><i class="ti ti-users"></i> Staff</div>
     <div class="tab" style="display:none" id="tab-admin-btn" onclick="sw('admin',this)"><i class="ti ti-shield"></i> Admin</div>
@@ -415,6 +416,11 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <div id="log-list"></div>
     </div>
 
+    <!-- REPORT -->
+    <div class="screen" id="tab-report">
+      <div id="rpt-content"></div>
+    </div>
+
     <!-- RATES -->
     <div class="screen" id="tab-rates">
       <div class="card">
@@ -468,7 +474,10 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <div class="card"><h4>Occupied Slots</h4><div id="adm-east"></div></div>
       <div class="card"><h4>Reserved Slots</h4><div id="adm-res"></div></div>
       <div class="card"><h4>Today's Transactions</h4><div id="adm-log"></div></div>
-      <div class="card" style="border-color:#f09595">
+      <!-- Admin Reports -->
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:10px 0 6px;padding:0 2px"><i class="ti ti-chart-bar"></i> Reports</div>
+      <div id="adm-rpt-content"></div>
+      <div class="card" style="border-color:#f09595;margin-top:8px">
         <h4 style="color:var(--danger)"><i class="ti ti-database-x"></i> Danger Zone</h4>
         <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Permanently clear all active sessions, transaction log, and reset all slots to free.</p>
         <button class="btn btn-danger" onclick="openTruncateModal()"><i class="ti ti-trash"></i> Truncate All Data…</button>
@@ -1405,7 +1414,7 @@ function checkOut(){
   }
   document.getElementById('cor-total').textContent='₱'+fee;
   document.getElementById('co-receipt').classList.add('show');
-  const _logEntry={slot:s.id,area:a.name,side:sideLabel,plate,type:s.type,dur,fee,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
+  const _logEntry={slot:s.id,area:a.name,side:sideLabel,plate,type:s.type,dur,fee,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),ts:Date.now()};
   txLog.unshift(_logEntry);
   pushLog(_logEntry);
   s.status='free';s.plate='';s.type='';s.since=null;delete sessions[s.id];
@@ -1422,6 +1431,9 @@ function renderLog(){
   const total=txLog.reduce((a,b)=>a+b.fee,0);
   document.getElementById('log-summary').textContent=`Today: ${txLog.length} vehicle${txLog.length>1?'s':''} · ₱${total} collected`;
   list.innerHTML=txLog.map(e=>`<div class="log-item"><div class="log-badge">${e.slot}</div><div class="log-info"><div class="log-plate">${e.plate}</div><div class="log-meta">${e.type} · ${e.dur} · ${e.area}</div></div><div class="log-right"><div class="log-amt">₱${e.fee}</div><div class="log-time">${e.time}</div></div></div>`).join('');
+  // Refresh Report tab if it's open
+  if(document.getElementById('tab-report')&&document.getElementById('tab-report').classList.contains('active'))
+    renderCashierReport();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1655,11 +1667,271 @@ function renderAdmin(){
   document.getElementById('adm-res').innerHTML=allRes.length?allRes.map(({s,a})=>`<div class="admin-slot-row"><div><div class="asr-slot">${s.id} — ${s.plate}</div><div class="asr-meta">${a.name}</div></div><span class="badge" style="background:#faeeda;color:#7a3f00">Reserved</span></div>`).join(''):'<div style="font-size:11px;color:var(--muted);padding:5px 0">None.</div>';
   const logTotal=txLog.reduce((a,b)=>a+b.fee,0);
   document.getElementById('adm-log').innerHTML=txLog.length?`<div style="font-size:11px;font-weight:600;margin-bottom:6px">₱${logTotal} from ${txLog.length} vehicle${txLog.length>1?'s':''}</div>`+txLog.map(e=>`<div class="admin-slot-row"><div><div class="asr-slot">${e.plate}</div><div class="asr-meta">${e.slot} · ${e.dur} · ${e.area}</div></div><div style="text-align:right"><div class="asr-fee">₱${e.fee}</div><div style="font-size:10px;color:var(--muted)">${e.time}</div></div></div>`).join(''):'<div style="font-size:11px;color:var(--muted);padding:5px 0">No transactions yet.</div>';
+  // Auto-refresh admin reports section
+  if(document.getElementById('adm-rpt-content')) renderAdminReports('adm-rpt-content');
 }
 
 // ══════════════════════════════════════════════════════
-// SETTINGS
+// CASHIER REPORT — per-hour count only
 // ══════════════════════════════════════════════════════
+function renderCashierReport(){
+  const el=document.getElementById('rpt-content');
+  if(!el) return;
+
+  const hourCount=Array(24).fill(0);
+  txLog.forEach(e=>{
+    const h=e.ts?new Date(e.ts).getHours():parseInt((e.time||'0:').split(':')[0]);
+    if(h>=0&&h<24) hourCount[h]++;
+  });
+  const maxC=Math.max(...hourCount,1);
+  const peakH=hourCount.indexOf(Math.max(...hourCount));
+  const hoursRange=Array.from({length:17},(_,i)=>i+6);
+  const bars=hoursRange.map(h=>{
+    const pct=Math.round((hourCount[h]/maxC)*100);
+    const lbl=h<12?`${h}a`:h===12?'12p':`${h-12}p`;
+    const isPeak=h===peakH&&hourCount[h]>0;
+    return`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+      <div style="font-size:8px;font-weight:700;color:${isPeak?'var(--accent)':'var(--blue)'};min-height:13px">${hourCount[h]||''}</div>
+      <div style="width:100%;background:var(--border);border-radius:3px;height:56px;display:flex;align-items:flex-end">
+        <div style="width:100%;height:${Math.max(pct,2)}%;background:${isPeak?'var(--accent)':'var(--blue)'};border-radius:3px;opacity:.85;transition:height .3s"></div>
+      </div>
+      <div style="font-size:7px;color:var(--muted);font-weight:${isPeak?700:400}">${lbl}</div>
+    </div>`;
+  }).join('');
+
+  const peakLabel=hourCount[peakH]>0?(peakH<12?peakH+'am':peakH===12?'12pm':(peakH-12)+'pm'):'—';
+  const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy)"><i class="ti ti-clock" style="color:var(--blue)"></i> Check-outs Per Hour</div>
+      <div style="font-size:10px;color:var(--muted)">as of ${now}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+      <div style="background:#e6f1fb;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--blue)">${txLog.length}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">Total Check-outs</div>
+      </div>
+      <div style="background:#f0e6fb;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:#7a0585">${peakLabel}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">Peak Hour</div>
+      </div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div style="display:flex;gap:3px;align-items:flex-end;padding:4px 0 6px;overflow-x:auto">${bars}</div>
+      <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:4px">6 AM — 10 PM · <span style="color:var(--accent);font-weight:700">■</span> peak hour</div>
+    </div>
+    ${!txLog.length?'<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px">No transactions yet this session.</div>':''}`;
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN REPORTS — full suite
+// ══════════════════════════════════════════════════════
+function renderAdminReports(targetId){
+  const el=document.getElementById(targetId);
+  if(!el) return;
+
+  // ── Raw aggregates ───────────────────────────────────
+  const total=txLog.reduce((a,b)=>a+b.fee,0);
+  const count=txLog.length;
+  const allOcc=[],allFree=[];
+  areas.forEach(a=>a.slots.forEach(s=>{
+    if(s.status==='occ') allOcc.push({s,a}); else allFree.push(s);
+  }));
+  const totalSlots=areas.reduce((a,ar)=>a+ar.slots.length,0);
+  const estPending=allOcc.reduce((acc,{s})=>{const m=Math.floor((Date.now()-s.since)/60000);return acc+computeFee(s.type,m).fee;},0);
+  const cashFund=dutyTickets.cashFund||0;
+
+  // ── Per-hour ─────────────────────────────────────────
+  const hourCount=Array(24).fill(0),hourSales=Array(24).fill(0);
+  txLog.forEach(e=>{
+    const h=e.ts?new Date(e.ts).getHours():parseInt((e.time||'0:').split(':')[0]);
+    if(h>=0&&h<24){hourCount[h]++;hourSales[h]+=e.fee||0;}
+  });
+  const maxC=Math.max(...hourCount,1);
+  const peakH=hourCount.indexOf(Math.max(...hourCount));
+  const hoursRange=Array.from({length:17},(_,i)=>i+6);
+  const hourBars=hoursRange.map(h=>{
+    const pct=Math.round((hourCount[h]/maxC)*100);
+    const lbl=h<12?`${h}a`:h===12?'12p':`${h-12}p`;
+    const isPeak=h===peakH&&hourCount[h]>0;
+    return`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+      <div style="font-size:8px;font-weight:700;color:${isPeak?'var(--accent)':'var(--blue)'};min-height:13px">${hourCount[h]||''}</div>
+      <div style="width:100%;background:var(--border);border-radius:3px;height:52px;display:flex;align-items:flex-end">
+        <div style="width:100%;height:${Math.max(pct,2)}%;background:${isPeak?'var(--accent)':'var(--blue)'};border-radius:3px;opacity:.85"></div>
+      </div>
+      <div style="font-size:7px;color:var(--muted);font-weight:${isPeak?700:400}">${lbl}</div>
+    </div>`;
+  }).join('');
+
+  // ── By parker type ───────────────────────────────────
+  const byType={};
+  txLog.forEach(e=>{
+    if(!byType[e.type])byType[e.type]={count:0,sales:0,totalMins:0};
+    byType[e.type].count++;
+    byType[e.type].sales+=e.fee||0;
+    // parse duration string back to mins for avg
+    const dur=e.dur||'';
+    const hm=dur.match(/(\d+)h/),mm=dur.match(/(\d+)m/);
+    byType[e.type].totalMins+=(hm?parseInt(hm[1])*60:0)+(mm?parseInt(mm[1]):0);
+  });
+  const typeRows=Object.entries(byType).sort((a,b)=>b[1].sales-a[1].sales).map(([t,v])=>{
+    const pct=total?Math.round((v.sales/total)*100):0;
+    const avgMins=v.count?Math.round(v.totalMins/v.count):0;
+    const avgDur=avgMins>=60?Math.floor(avgMins/60)+'h'+(avgMins%60?avgMins%60+'m':''):avgMins+'m';
+    return`<div style="padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;font-weight:700">${t}</span>
+        <div style="text-align:right">
+          <span style="font-size:13px;font-weight:800;color:#2d7a1f">₱${v.sales}</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:5px">${v.count} vehicle${v.count>1?'s':''}</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin:3px 0">
+        <span>Avg duration: <b style="color:var(--navy)">${avgDur}</b></span>
+        <span>Avg fee: <b style="color:var(--navy)">₱${v.count?Math.round(v.sales/v.count):0}</b></span>
+      </div>
+      <div style="background:var(--border);border-radius:3px;height:5px">
+        <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px"></div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px">${pct}% of sales</div>
+    </div>`;
+  }).join('');
+
+  // ── Still parked by type ─────────────────────────────
+  const stillByType={};
+  allOcc.forEach(({s})=>{if(!stillByType[s.type])stillByType[s.type]={count:0,est:0};stillByType[s.type].count++;const m=Math.floor((Date.now()-s.since)/60000);stillByType[s.type].est+=computeFee(s.type,m).fee;});
+  const stillRows=Object.entries(stillByType).sort((a,b)=>b[1].count-a[1].count).map(([t,v])=>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;font-weight:600">${t}</span>
+      <div style="text-align:right">
+        <span style="font-size:12px;font-weight:700;color:var(--danger)">${v.count} parked</span>
+        <span style="font-size:10px;color:var(--muted);margin-left:6px">est ₱${v.est}</span>
+      </div>
+    </div>`).join('');
+
+  // ── Slot utilization per area ────────────────────────
+  const areaUtil=areas.map(a=>{
+    const occ=a.slots.filter(s=>s.status==='occ').length;
+    const tot=a.slots.length;
+    const pct=tot?Math.round((occ/tot)*100):0;
+    return`<div style="padding:5px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="font-weight:600">${a.name}</span>
+        <span style="color:var(--muted)">${occ}/${tot} · <b style="color:${pct>70?'var(--danger)':pct>40?'var(--warn)':'#2d7a1f'}">${pct}%</b></span>
+      </div>
+      <div style="background:var(--border);border-radius:3px;height:6px">
+        <div style="width:${pct}%;height:100%;background:${pct>70?'var(--danger)':pct>40?'var(--warn)':'#2d7a1f'};border-radius:3px"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Top earner slots ─────────────────────────────────
+  const slotEarnings={};
+  txLog.forEach(e=>{if(!slotEarnings[e.slot])slotEarnings[e.slot]=0;slotEarnings[e.slot]+=e.fee||0;});
+  const topSlots=Object.entries(slotEarnings).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topRows=topSlots.map(([slot,earned],i)=>
+    `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">
+      <div style="width:22px;height:22px;border-radius:6px;background:${i===0?'var(--accent)':'var(--bg)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:${i===0?'#fff':'var(--muted)'};flex-shrink:0">${i+1}</div>
+      <span style="flex:1;font-size:12px;font-weight:600">${slot}</span>
+      <span style="font-size:13px;font-weight:800;color:#2d7a1f">₱${earned}</span>
+    </div>`).join('');
+
+  const peakLabel=hourCount[peakH]>0?(peakH<12?peakH+'am':peakH===12?'12pm':(peakH-12)+'pm'):'—';
+  const utilPct=totalSlots?Math.round((allOcc.length/totalSlots)*100):0;
+  const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+  el.innerHTML=`
+    <div style="font-size:10px;color:var(--muted);text-align:right;margin-bottom:6px;padding:0 2px">Updated ${now}</div>
+
+    <!-- 1. Sales Summary -->
+    <div class="card" style="margin-bottom:8px">
+      <h4><i class="ti ti-cash" style="color:#2d7a1f"></i> Sales Summary</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+        <div style="background:#eaf7f1;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#2d7a1f">₱${total}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">Collected</div>
+        </div>
+        <div style="background:#faeeda;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:var(--warn)">₱${estPending}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">Est. Pending</div>
+        </div>
+        <div style="background:#e6f1fb;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:var(--blue)">${count}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">Vehicles Out</div>
+        </div>
+        <div style="background:#f0e6fb;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#7a0585">₱${count?Math.round(total/count):0}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">Avg / Vehicle</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+        <div style="background:#eaf3de;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#2d7a1f">₱${cashFund+total}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">Cash on Hand (incl. float)</div>
+        </div>
+        <div style="background:#fdf0f0;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#7a0585">${peakLabel}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">Peak Hour</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Utilization -->
+    <div class="card" style="margin-bottom:8px">
+      <h4><i class="ti ti-parking" style="color:var(--danger)"></i> Slot Utilization</h4>
+      <div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+        <div style="flex:1;background:var(--border);border-radius:6px;height:12px">
+          <div style="width:${utilPct}%;height:100%;background:${utilPct>70?'var(--danger)':utilPct>40?'var(--warn)':'#2d7a1f'};border-radius:6px;transition:width .3s"></div>
+        </div>
+        <span style="font-size:14px;font-weight:800;color:var(--navy);flex-shrink:0">${utilPct}%</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${allOcc.length} occupied · ${allFree.length} free · ${totalSlots} total</div>
+      ${areaUtil||'<div style="font-size:11px;color:var(--muted)">No areas.</div>'}
+    </div>
+
+    <!-- 3. Per-Hour Chart -->
+    <div class="card" style="margin-bottom:8px">
+      <h4><i class="ti ti-clock" style="color:var(--blue)"></i> Check-outs Per Hour</h4>
+      <div style="display:flex;gap:3px;align-items:flex-end;padding:8px 0 4px;overflow-x:auto">${hourBars}</div>
+      <div style="font-size:9px;color:var(--muted);text-align:center">6 AM — 10 PM · <span style="color:var(--accent);font-weight:700">■</span> peak</div>
+      <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px">
+        ${hoursRange.filter(h=>hourCount[h]>0).map(h=>{
+          const lbl=h<12?h+'am':h===12?'12pm':(h-12)+'pm';
+          return`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">${lbl}</span>
+            <span><b>${hourCount[h]}</b> out · <b style="color:#2d7a1f">₱${hourSales[h]}</b></span>
+          </div>`;
+        }).join('')||'<div style="font-size:11px;color:var(--muted)">No data yet.</div>'}
+      </div>
+    </div>
+
+    <!-- 4. By Parker Type -->
+    <div class="card" style="margin-bottom:8px">
+      <h4><i class="ti ti-car" style="color:var(--accent)"></i> By Parker Type</h4>
+      ${typeRows||'<div style="font-size:11px;color:var(--muted);padding:6px 0">No transactions yet.</div>'}
+    </div>
+
+    <!-- 5. Currently Parked -->
+    <div class="card" style="margin-bottom:8px">
+      <h4><i class="ti ti-map-pin" style="color:var(--danger)"></i> Currently Parked by Type</h4>
+      ${stillRows||'<div style="font-size:11px;color:var(--muted);padding:6px 0">No vehicles currently parked.</div>'}
+    </div>
+
+    <!-- 6. Top Earner Slots -->
+    <div class="card">
+      <h4><i class="ti ti-trophy" style="color:#f5a623"></i> Top Earner Slots</h4>
+      ${topRows||'<div style="font-size:11px;color:var(--muted);padding:6px 0">No transactions yet.</div>'}
+    </div>`;
+}
+
+// Legacy wrapper so existing sw() calls still work
+function renderReports(targetId){
+  if(targetId==='rpt-content') renderCashierReport();
+  else renderAdminReports(targetId);
+}
+
+
 function saveBizInfo(){
   const n=document.getElementById('biz-name').value.trim();
   const l=document.getElementById('biz-loc').value.trim();
@@ -1818,7 +2090,9 @@ function sw(name,el){
   if(name==='log')renderLog();
   if(name==='rates')buildRatesEditor();
   if(name==='cashiers')renderCashiers();
+  if(name==='report')renderCashierReport();
   if(name==='admin')renderAdmin();
+  if(name==='admin')renderAdminReports('adm-rpt-content');
   if(name==='settings'){
     renderAreaList();
     // Sync biz-name/loc with current saved values
