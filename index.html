@@ -222,10 +222,6 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <input id="duty-sr" placeholder="e.g. SR-001" style="font-family:monospace;font-size:14px;letter-spacing:.5px" autocapitalize="characters">
     </div>
     <div class="field">
-      <label>💵 Cash Fund (Starting Amount)</label>
-      <input id="duty-fund" type="number" min="0" placeholder="e.g. 500" style="font-size:14px">
-    </div>
-    <div class="field">
       <label>Cashier Name</label>
       <select id="duty-staff-pick" onchange="onDutyStaffPick()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;margin-bottom:4px">
         <option value="">— Select from staff list —</option>
@@ -293,7 +289,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
     <!-- MAP / FLOORPLAN -->
     <div class="screen active" id="tab-floorplan">
       <div class="stats-row">
-        <div class="scard"><div class="val green" id="st-free">0</div><div class="lbl">Free</div></div>
+        <div class="scard"><div class="val green" id="st-free">0</div><div class="lbl">Vacant Slot</div></div>
         <div class="scard"><div class="val red" id="st-occ">0</div><div class="lbl">Parked</div></div>
         <div class="scard"><div class="val amber" id="st-res">0</div><div class="lbl">Reserved</div></div>
       </div>
@@ -302,7 +298,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
           <div>
             <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px"><i class="ti ti-map-2"></i> <span id="map-area-label">Area</span></div>
             <div class="legend" style="margin:4px 0 0">
-              <div class="leg"><div class="leg-dot" style="background:#c0dd97"></div>Free</div>
+              <div class="leg"><div class="leg-dot" style="background:#c0dd97"></div>Vacant Slot</div>
               <div class="leg"><div class="leg-dot" style="background:#f7c1c1"></div>Parked</div>
               <div class="leg"><div class="leg-dot" style="background:#fac775"></div>Reserved</div>
             </div>
@@ -2549,7 +2545,6 @@ function renderAuditContent(){
     <!-- Cash Fund -->
     <div style="grid-column:1/-1;background:#eaf7f1;border:1px solid #5dcaa5;border-radius:8px;padding:10px">
       <div style="font-size:10px;font-weight:700;color:#0f6e56;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px"><i class="ti ti-cash"></i> Cash Fund</div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid #b2e6d4"><span style="color:var(--muted)">Starting Float</span><span style="font-weight:700">₱${cashFund.toFixed(2)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid #b2e6d4"><span style="color:var(--muted)">Collected This Session</span><span style="font-weight:700;color:#2d7a1f">+₱${total}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0 0;margin-top:2px"><span style="font-weight:700">Expected Cash on Hand</span><span style="font-weight:800;color:#0f6e56">₱${netCash.toFixed(2)}</span></div>
     </div>
