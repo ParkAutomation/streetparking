@@ -222,19 +222,11 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <input id="duty-sr" placeholder="e.g. SR-001" style="font-family:monospace;font-size:14px;letter-spacing:.5px" autocapitalize="characters">
     </div>
     <div class="field">
-      <label>💵 Cash Fund (Starting Amount)</label>
-      <input id="duty-fund" type="number" min="0" placeholder="e.g. 500" style="font-size:14px">
-    </div>
-    <div class="field">
       <label>Cashier Name</label>
       <select id="duty-staff-pick" onchange="onDutyStaffPick()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;margin-bottom:4px">
         <option value="">— Select from staff list —</option>
       </select>
       <input id="duty-name" placeholder="Or type name manually" autocapitalize="words">
-    </div>
-    <div class="field">
-      <label>💵 Cash Fund (Starting Float)</label>
-      <input id="duty-cashfund" type="number" min="0" placeholder="e.g. 500" style="font-size:14px">
     </div>
     <button class="btn btn-primary" onclick="startDuty()"><i class="ti ti-player-play"></i> Start Duty</button>
     <button class="btn" style="margin-top:4px;opacity:.6" onclick="closeDutyModal()">Skip for now</button>
@@ -392,20 +384,10 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         <div class="r-total"><span>Total</span><span id="cor-total"></span></div>
         <div style="text-align:center;margin-top:8px"><span class="badge badge-paid">Paid ✓</span></div>
       </div>
-      <!-- Cashier Quick Menu -->
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px;margin-top:10px">
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;padding:0 2px">Quick Menu</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-          <button class="btn" style="background:#f0e6fb;color:#7a0585;border-color:#d4a8f0;flex-direction:column;gap:4px;padding:10px 4px;font-size:10px" onclick="openAuditModal()">
-            <i class="ti ti-report-money" style="font-size:18px"></i> Spot Audit
-          </button>
-          <button class="btn btn-blue" style="flex-direction:column;gap:4px;padding:10px 4px;font-size:10px" onclick="openRateSheetModal()">
-            <i class="ti ti-currency-peso" style="font-size:18px"></i> Rate Sheet
-          </button>
-          <button class="btn btn-danger" style="flex-direction:column;gap:4px;padding:10px 4px;font-size:10px" onclick="cashierLogout()">
-            <i class="ti ti-logout" style="font-size:18px"></i> End Duty
-          </button>
-        </div>
+      <!-- Audit + Logout row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <button class="btn" style="background:#f0e6fb;color:#7a0585;border-color:#d4a8f0" onclick="openAuditModal()"><i class="ti ti-report-money"></i> Audit</button>
+        <button class="btn btn-danger" onclick="cashierLogout()"><i class="ti ti-logout"></i> End Duty</button>
       </div>
     </div>
 
@@ -698,20 +680,17 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 
   // Expose helpers to global scope so the existing code can call them
   window._fb = { db, ref, onValue, set, update, push, remove, get };
-  // _fbReady starts false; set true only once Firebase confirms connected
-  window._fbReady = false;
-  window._fbConnected = false;
+  window._fbReady = true;
 
   // ── Sync indicator helper ────────────────────────────────
-  function setSyncStatus(state){           // 'syncing' | 'ok' | 'err' | 'connecting'
+  function setSyncStatus(state){           // 'syncing' | 'ok' | 'err'
     const dot = document.getElementById('fb-dot');
     const lbl = document.getElementById('fb-lbl');
     if(!dot||!lbl) return;
     const map = {
-      connecting:['#f5a623','Connecting…'],
-      syncing:   ['#f5a623','Saving…'],
-      ok:        ['#1d9e75','Live ✓'],
-      err:       ['#a32d2d','Offline — local only']
+      syncing:['#f5a623','Syncing…'],
+      ok:     ['#1d9e75','Live ✓'],
+      err:    ['#a32d2d','Offline']
     };
     const [color,text] = map[state]||map.ok;
     dot.style.background = color;
@@ -732,11 +711,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 
   // ── SAVE CONFIG (Admin only: rates, staff, areas, biz info) ──
   window.fbSaveConfig = function(){
-    if(!window._fbReady){
-      window._pendingConfigSave=true;
-      window.saveToLS();
-      return;
-    }
+    if(!window._fbReady){ window.saveToLS(); return; }
     setSyncStatus('syncing');
     const payload = {
       bizName:      window.bizName,
@@ -788,20 +763,6 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
   // REAL-TIME LISTENERS (subscribe once DOM is ready)
   // ════════════════════════════════════════════════════════
   window.addEventListener('DOMContentLoaded', ()=>{
-
-    // ── Real-time connection status ──────────────────────
-    // Firebase .info/connected fires true/false as network changes
-    onValue(ref(db,'.info/connected'), snap => {
-      const connected = snap.val() === true;
-      window._fbConnected = connected;
-      window._fbReady = connected;
-      setSyncStatus(connected ? 'ok' : 'err');
-      // On reconnect: flush any pending saves
-      if(connected && window._pendingConfigSave){
-        window._pendingConfigSave=false;
-        window.fbSaveConfig();
-      }
-    });
 
     // ── Listen: CONFIG ───────────────────────────────────
     onValue(ref(db,'parking/config'), snap => {
@@ -1642,8 +1603,6 @@ function saveBizInfo(){
   const n=document.getElementById('biz-name').value.trim();
   const l=document.getElementById('biz-loc').value.trim();
   bizName=n||bizName; bizLoc=l||bizLoc;
-  // Keep window globals in sync so Firebase module reads current values
-  window.bizName=bizName; window.bizLoc=bizLoc;
   // Update header branding live
   const hdr=document.getElementById('hdr-biz-name');
   if(hdr)hdr.textContent=bizName;
@@ -1859,7 +1818,7 @@ function submitTruncate(){
 // ══════════════════════════════════════════════════════
 // DUTY START — ticket series
 // ══════════════════════════════════════════════════════
-let dutyTickets={pv:'',sr:'',pvCount:0,srCount:0,cashierOnDuty:'',cashFund:0};
+let dutyTickets={pv:'',sr:'',pvCount:0,srCount:0,cashierOnDuty:''};
 
 function openDutyModal(){
   const m=document.getElementById('duty-modal');
@@ -1879,7 +1838,6 @@ function openDutyModal(){
   document.getElementById('duty-pv').value=dutyTickets.pv;
   document.getElementById('duty-sr').value=dutyTickets.sr;
   document.getElementById('duty-name').value=dutyTickets.cashierOnDuty;
-  document.getElementById('duty-cashfund').value=dutyTickets.cashFund||'';
   setTimeout(()=>pick.focus(),100);
 }
 function onDutyStaffPick(){
@@ -1922,7 +1880,6 @@ function startDuty(){
   dutyTickets.pv=pv; dutyTickets.sr=sr;
   dutyTickets.pvCount=0; dutyTickets.srCount=0;
   dutyTickets.cashierOnDuty=name;
-  dutyTickets.cashFund=parseFloat(document.getElementById('duty-cashfund').value)||0;
   closeDutyModal();
   updateDutyBanner();
   // Pre-fill ticket field with first PV ticket
@@ -2165,27 +2122,16 @@ function submitAuditPass(){
 }
 
 function renderAuditContent(){
+  // Stats
   const total=txLog.reduce((a,b)=>a+b.fee,0);
   const byType={};
   txLog.forEach(e=>{ byType[e.type]=(byType[e.type]||0)+e.fee; });
-  const byTypeCount={};
-  txLog.forEach(e=>{ byTypeCount[e.type]=(byTypeCount[e.type]||0)+1; });
-
   const allOcc=[];
   areas.forEach(a=>a.slots.forEach(s=>{ if(s.status==='occ') allOcc.push({s,a}); }));
   const estPending=allOcc.reduce((acc,{s})=>{ const m=Math.floor((Date.now()-s.since)/60000); return acc+computeFee(s.type,m).fee; },0);
 
-  // Still parked count by type
-  const stillByType={};
-  allOcc.forEach(({s})=>{ stillByType[s.type]=(stillByType[s.type]||0)+1; });
-
-  // Cash fund summary
-  const cashFund=dutyTickets.cashFund||0;
-  const netCash=cashFund+total;
-
   const statsEl=document.getElementById('audit-stats');
   statsEl.innerHTML=`
-    <!-- Row 1: collected + pending -->
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
       <div style="font-size:20px;font-weight:800;color:#2d7a1f">₱${total}</div>
       <div style="font-size:10px;color:var(--muted);margin-top:2px">Collected</div>
@@ -2194,7 +2140,6 @@ function renderAuditContent(){
       <div style="font-size:20px;font-weight:800;color:var(--accent)">₱${estPending}</div>
       <div style="font-size:10px;color:var(--muted);margin-top:2px">Est. Pending</div>
     </div>
-    <!-- Row 2: checkouts + still parked -->
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
       <div style="font-size:20px;font-weight:800;color:var(--blue)">${txLog.length}</div>
       <div style="font-size:10px;color:var(--muted);margin-top:2px">Check-outs</div>
@@ -2203,38 +2148,10 @@ function renderAuditContent(){
       <div style="font-size:20px;font-weight:800;color:var(--warn)">${allOcc.length}</div>
       <div style="font-size:10px;color:var(--muted);margin-top:2px">Still Parked</div>
     </div>
-
-    <!-- Cash Fund -->
-    <div style="grid-column:1/-1;background:#eaf7f1;border:1px solid #5dcaa5;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#0f6e56;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px"><i class="ti ti-cash"></i> Cash Fund</div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid #b2e6d4"><span style="color:var(--muted)">Starting Float</span><span style="font-weight:700">₱${cashFund.toFixed(2)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid #b2e6d4"><span style="color:var(--muted)">Collected This Session</span><span style="font-weight:700;color:#2d7a1f">+₱${total}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0 0;margin-top:2px"><span style="font-weight:700">Expected Cash on Hand</span><span style="font-weight:800;color:#0f6e56">₱${netCash.toFixed(2)}</span></div>
-    </div>
-
-    <!-- Vehicle Type Breakdown (count + collected) -->
-    <div style="grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">By Vehicle Type — This Session</div>
-      ${VEHICLE_TYPES.filter(t=>byTypeCount[t]||stillByType[t]).map(t=>{
-        const r=rates[t]||{};
-        let rateStr='—';
-        if(r.mode==='payg') rateStr=`₱${r.firstRate||60} / +₱${r.succRate||30} per 30min`;
-        else if(r.mode==='senior') rateStr=`${r.freeHours||3}h FREE / +₱${r.succRate||30} per 30min`;
-        else if(r.mode==='pwd') rateStr='20% off PV rate';
-        else if(r.mode==='free_first') rateStr=`${r.freeHours||1}h FREE / +₱${r.succeedingRate||100}/hr`;
-        else if(r.hours&&r.hours.length) rateStr=`₱${r.hours[0].rate} first ${r.hours[0].upto}h`+(r.hours[1]?` / +₱${r.hours[1].rate}/h`:'');
-        return`<div style="padding:5px 0;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;font-weight:600">${t}</span>
-            <span style="font-size:12px;font-weight:700;color:#2d7a1f">${byType[t]?'₱'+byType[t]:''}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px">
-            <span>${rateStr}</span>
-            <span>${byTypeCount[t]||0} out · ${stillByType[t]||0} parked</span>
-          </div>
-        </div>`;
-      }).join('')||'<div style="font-size:11px;color:var(--muted);padding:4px 0">No transactions yet.</div>'}
-    </div>
+    ${Object.keys(byType).length?`<div style="grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">By Vehicle Type</div>
+      ${Object.entries(byType).map(([t,f])=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">${t}</span><span style="font-weight:700;color:var(--accent)">₱${f}</span></div>`).join('')}
+    </div>`:''}
   `;
 
   // Log list
@@ -2259,67 +2176,10 @@ function renderAuditContent(){
   document.getElementById('audit-time').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 }
 
-// ── Rate Sheet Modal ────────────────────────
-function openRateSheetModal(){
-  const m=document.getElementById('rate-sheet-modal');
-  const content=document.getElementById('rs-content');
-  content.innerHTML=VEHICLE_TYPES.filter(t=>rates[t]&&rates[t].enabled!==false).map(t=>{
-    const r=rates[t];
-    let initStr='—', succStr='—', modeLabel='';
-    if(r.mode==='payg'){
-      initStr=`₱${r.firstRate||60} (1st hour)`;
-      succStr=`₱${r.succRate||30} / 30 min`;
-      modeLabel='Pay-As-You-Park';
-    } else if(r.mode==='senior'){
-      initStr=`FREE (first ${r.freeHours||3}h)`;
-      succStr=`₱${r.succRate||30} / 30 min`;
-      modeLabel='QC Senior';
-    } else if(r.mode==='pwd'){
-      initStr='20% discount';
-      succStr='on PV rate';
-      modeLabel='PWD';
-    } else if(r.mode==='free_first'){
-      initStr=`FREE (first ${r.freeHours||1}h)`;
-      succStr=`₱${r.succeedingRate||100} / hr`;
-      modeLabel='Free First';
-    } else if(r.hours&&r.hours.length){
-      initStr=`₱${r.hours[0].rate} (first ${r.hours[0].upto}h)`;
-      succStr=r.hours[1]?`₱${r.hours[1].rate} / hr`:'—';
-      modeLabel='Tiered';
-    }
-    const icon=t==='Motorcycle'?'ti-motorbike':t==='Delivery'?'ti-truck':'ti-car';
-    return`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
-        <div style="width:28px;height:28px;border-radius:7px;background:#e6f1fb;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <i class="ti ${icon}" style="font-size:14px;color:var(--blue)"></i>
-        </div>
-        <div>
-          <div style="font-size:13px;font-weight:700">${t}</div>
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${modeLabel}</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-        <div style="background:#eaf3de;border-radius:6px;padding:6px 8px">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Initial</div>
-          <div style="font-size:12px;font-weight:700;color:#2d7a1f">${initStr}</div>
-        </div>
-        <div style="background:#faeeda;border-radius:6px;padding:6px 8px">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Succeeding</div>
-          <div style="font-size:12px;font-weight:700;color:var(--warn)">${succStr}</div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-  m.style.display='flex';
-}
-function closeRateSheetModal(){
-  document.getElementById('rate-sheet-modal').style.display='none';
-}
-
 // ── Cashier End Duty / Logout ────────────────────────
 function cashierLogout(){
   if(!confirm('End duty and clear session ticket counters?')) return;
-  dutyTickets={pv:'',sr:'',pvCount:0,srCount:0,cashierOnDuty:'',cashFund:0};
+  dutyTickets={pv:'',sr:'',pvCount:0,srCount:0,cashierOnDuty:''};
   updateDutyBanner();
   // Clear check-in/out form fields
   document.getElementById('ci-ticket').value='';
@@ -2333,10 +2193,9 @@ function cashierLogout(){
 
 // ══════════════════════════════════════════════════════
 // EXPOSE GLOBALS FOR FIREBASE MODULE
-// bizName/bizLoc use getters so Firebase always reads the live value
 // ══════════════════════════════════════════════════════
-Object.defineProperty(window,'bizName',{get:()=>bizName,set:v=>{bizName=v;},configurable:true,enumerable:true});
-Object.defineProperty(window,'bizLoc', {get:()=>bizLoc, set:v=>{bizLoc=v;}, configurable:true,enumerable:true});
+window.bizName          = bizName;
+window.bizLoc           = bizLoc;
 window.rates            = rates;
 window.VEHICLE_TYPES    = VEHICLE_TYPES;
 window.cashiers         = cashiers;
@@ -2382,114 +2241,5 @@ window.updateOnDutyWidget = updateOnDutyWidget;
     </div>
   </div>
 </div>
-
-<!-- Spot Report Modal -->
-<div id="spot-report-modal" style="display:none;position:fixed;inset:0;z-index:9300;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:16px;">
-  <div style="background:var(--card);border-radius:14px;width:100%;max-width:360px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto">
-    <!-- Header -->
-    <div style="background:var(--navy);border-radius:14px 14px 0 0;padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:8px">
-        <i class="ti ti-clipboard-data" style="font-size:18px;color:#9fe1cb"></i>
-        <div>
-          <div style="font-size:13px;font-weight:800;color:#fff">Spot Audit Report</div>
-          <div style="font-size:9px;color:#9fe1cb;margin-top:1px" id="spr-timestamp"></div>
-        </div>
-      </div>
-      <span onclick="closeSpotReport()" style="cursor:pointer;font-size:20px;color:rgba(255,255,255,.6);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.08)">×</span>
-    </div>
-    <div style="padding:12px 14px">
-
-      <!-- 1. CASH FUND -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="ti ti-cash" style="font-size:11px"></i> Cash Fund</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-            <div style="font-size:16px;font-weight:800;color:#2d7a1f" id="spr-fund">₱0</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:1px">Starting Fund</div>
-          </div>
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-            <div style="font-size:16px;font-weight:800;color:var(--accent)" id="spr-collected">₱0</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:1px">Collected</div>
-          </div>
-          <div style="background:#eaf3de;border:1px solid #a8d87a;border-radius:8px;padding:8px;text-align:center">
-            <div style="font-size:16px;font-weight:800;color:#2d7a1f" id="spr-total-fund">₱0</div>
-            <div style="font-size:9px;color:#3b6d11;margin-top:1px;font-weight:600">Total Cash</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="border-top:1px solid var(--border);margin:10px 0"></div>
-
-      <!-- 2. SLOT COUNT -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="ti ti-layout-grid" style="font-size:11px"></i> Slot Count</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">
-          <div style="background:#eaf3de;border:1px solid #a8d87a;border-radius:7px;padding:7px 4px;text-align:center">
-            <div style="font-size:18px;font-weight:800;color:#2d7a1f" id="spr-free">0</div>
-            <div style="font-size:8px;color:#3b6d11;font-weight:600">Free</div>
-          </div>
-          <div style="background:#fcebeb;border:1px solid #f09595;border-radius:7px;padding:7px 4px;text-align:center">
-            <div style="font-size:18px;font-weight:800;color:var(--danger)" id="spr-parked">0</div>
-            <div style="font-size:8px;color:var(--danger);font-weight:600">Parked</div>
-          </div>
-          <div style="background:#faeeda;border:1px solid #e8b96a;border-radius:7px;padding:7px 4px;text-align:center">
-            <div style="font-size:18px;font-weight:800;color:var(--warn)" id="spr-reserved">0</div>
-            <div style="font-size:8px;color:var(--warn);font-weight:600">Reserved</div>
-          </div>
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 4px;text-align:center">
-            <div style="font-size:18px;font-weight:800;color:var(--text)" id="spr-total-slots">0</div>
-            <div style="font-size:8px;color:var(--muted);font-weight:600">Total</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="border-top:1px solid var(--border);margin:10px 0"></div>
-
-      <!-- 3. RATE CARD -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="ti ti-currency-peso" style="font-size:11px"></i> Rate Card</div>
-        <div id="spr-rates" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden"></div>
-      </div>
-
-      <div style="border-top:1px solid var(--border);margin:10px 0"></div>
-
-      <!-- 4. SESSION TOTALS -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="ti ti-chart-bar" style="font-size:11px"></i> Session Totals</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px">
-            <div style="font-size:18px;font-weight:800;color:var(--blue)" id="spr-checkouts">0</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:1px">Check-outs</div>
-          </div>
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px">
-            <div style="font-size:18px;font-weight:800;color:var(--accent)" id="spr-pending">₱0</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:1px">Est. Pending</div>
-          </div>
-        </div>
-        <!-- By type breakdown -->
-        <div id="spr-bytype" style="margin-top:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:none"></div>
-      </div>
-
-      <button class="btn btn-accent" style="width:100%;margin-top:4px" onclick="closeSpotReport()"><i class="ti ti-check"></i> Close</button>
-    </div>
-  </div>
-</div>
-<!-- Rate Sheet Modal -->
-<div id="rate-sheet-modal" style="display:none;position:fixed;inset:0;z-index:9150;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;color:var(--navy)"><i class="ti ti-currency-peso" style="font-size:18px;color:var(--blue)"></i> Parking Rate Sheet</div>
-      <span onclick="closeRateSheetModal()" style="cursor:pointer;font-size:20px;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg)">×</span>
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;background:var(--bg);border-radius:6px;padding:6px 8px;border:1px solid var(--border)">
-      <i class="ti ti-info-circle"></i> Reference only. Rates are live from current settings.
-    </div>
-    <div id="rs-content"></div>
-    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)">
-      <button class="btn btn-accent" onclick="closeRateSheetModal()"><i class="ti ti-check"></i> Close</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
