@@ -501,6 +501,20 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         </div>
       </div>
 
+      <!-- Admin Password -->
+      <div class="settings-section">
+        <div class="settings-section-title"><i class="ti ti-lock"></i> Admin / Owner Password</div>
+        <div class="card" style="margin-bottom:4px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Used for <b>Admin login only</b>. Default: <b>PropA123</b><br><span style="color:var(--danger)">Truncate &amp; Spot Audit have a separate fixed password.</span></div>
+          <div class="field"><label>Current Password</label><input id="pass-current" type="password" placeholder="Enter current password"></div>
+          <div class="field"><label>New Password</label><input id="pass-new" type="password" placeholder="New password (min 6 chars)"></div>
+          <div class="field"><label>Confirm New Password</label><input id="pass-confirm" type="password" placeholder="Repeat new password"></div>
+          <div id="pass-err" style="font-size:11px;color:var(--danger);margin-bottom:6px;display:none"></div>
+          <div id="pass-ok" style="font-size:11px;color:#2d7a1f;margin-bottom:6px;display:none">✓ Password updated.</div>
+          <button class="btn btn-primary btn-sm" style="width:100%" onclick="changeAdminPass()"><i class="ti ti-key"></i> Change Password</button>
+        </div>
+      </div>
+
       <!-- Areas / Locations -->
       <div class="settings-section">
         <div class="settings-section-title">Parking Areas / Locations</div>
@@ -1429,7 +1443,9 @@ function checkOut(){
   }
   document.getElementById('cor-total').textContent='₱'+fee;
   document.getElementById('co-receipt').classList.add('show');
-  const _logEntry={slot:s.id,area:a.name,side:sideLabel,plate,type:s.type,dur,fee,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),ts:Date.now()};
+  const _logEntry={slot:s.id,area:a.name,side:sideLabel,plate,type:s.type,dur,fee,
+    upfrontPaid:result.upfrontPaid||0,
+    time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),ts:Date.now()};
   txLog.unshift(_logEntry);
   pushLog(_logEntry);
   s.status='free';s.plate='';s.type='';s.since=null;delete sessions[s.id];
@@ -1694,35 +1710,43 @@ function renderCashierReport(){
   if(!el) return;
 
   const hourCount=Array(24).fill(0);
+  const hourPaid=Array(24).fill(0); // paid on entry count per hour
   txLog.forEach(e=>{
     const h=e.ts?new Date(e.ts).getHours():parseInt((e.time||'0:').split(':')[0]);
-    if(h>=0&&h<24) hourCount[h]++;
+    if(h>=0&&h<24){
+      hourCount[h]++;
+      if(e.upfrontPaid>0) hourPaid[h]++;
+    }
   });
   const maxC=Math.max(...hourCount,1);
+  const maxP=Math.max(...hourPaid,1);
   const peakH=hourCount.indexOf(Math.max(...hourCount));
 
-  const mkBar=(h)=>{
-    const pct=Math.round((hourCount[h]/maxC)*100);
+  const mkBar=(h,counts,max,color,peakH)=>{
+    const pct=Math.round((counts[h]/max)*100);
     const lbl=h===0?'12a':h<12?`${h}a`:h===12?'12p':`${h-12}p`;
-    const isPeak=h===peakH&&hourCount[h]>0;
+    const isPeak=h===peakH&&counts[h]>0;
     return`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:0">
-      <div style="font-size:7.5px;font-weight:700;color:${isPeak?'var(--accent)':'var(--blue)'};min-height:12px;line-height:1">${hourCount[h]||''}</div>
-      <div style="width:100%;background:var(--border);border-radius:3px;height:44px;display:flex;align-items:flex-end">
-        <div style="width:100%;height:${Math.max(pct,2)}%;background:${isPeak?'var(--accent)':'var(--blue)'};border-radius:3px;opacity:.85;transition:height .3s"></div>
+      <div style="font-size:7.5px;font-weight:700;color:${isPeak?'var(--accent)':color};min-height:12px;line-height:1">${counts[h]||''}</div>
+      <div style="width:100%;background:var(--border);border-radius:3px;height:40px;display:flex;align-items:flex-end">
+        <div style="width:100%;height:${Math.max(pct,2)}%;background:${isPeak?'var(--accent)':color};border-radius:3px;opacity:.85;transition:height .3s"></div>
       </div>
       <div style="font-size:6.5px;color:var(--muted);font-weight:${isPeak?700:400};line-height:1">${lbl}</div>
     </div>`;
   };
 
-  // Row 1: 6am–5pm (12 hours), Row 2: 6pm–5am (12 hours)
-  const row1=Array.from({length:12},(_,i)=>i+6);   // 6–17
-  const row2=[18,19,20,21,22,23,0,1,2,3,4,5];       // 6pm–5am
-
-  const bars1=row1.map(mkBar).join('');
-  const bars2=row2.map(mkBar).join('');
-
+  const row1=Array.from({length:12},(_,i)=>i+6);
+  const row2=[18,19,20,21,22,23,0,1,2,3,4,5];
   const peakLabel=hourCount[peakH]>0?(peakH===0?'12am':peakH<12?peakH+'am':peakH===12?'12pm':(peakH-12)+'pm'):'—';
   const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const totalPaid=txLog.filter(e=>e.upfrontPaid>0).length;
+
+  const mkChart=(label,counts,max,color)=>`
+    <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">🌞 6 AM — 6 PM</div>
+    <div style="display:flex;gap:2px;align-items:flex-end;padding:2px 0 4px">${row1.map(h=>mkBar(h,counts,max,color,peakH)).join('')}</div>
+    <div style="border-top:1px dashed var(--border);margin:8px 0"></div>
+    <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">🌙 6 PM — 6 AM</div>
+    <div style="display:flex;gap:2px;align-items:flex-end;padding:2px 0 4px">${row2.map(h=>mkBar(h,counts,max,color,peakH)).join('')}</div>`;
 
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px">
@@ -1739,13 +1763,22 @@ function renderCashierReport(){
         <div style="font-size:10px;color:var(--muted);margin-top:2px">Peak Hour</div>
       </div>
     </div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 10px 8px">
-      <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">🌞 6 AM — 6 PM</div>
-      <div style="display:flex;gap:2px;align-items:flex-end;padding:2px 0 4px">${bars1}</div>
-      <div style="border-top:1px dashed var(--border);margin:8px 0"></div>
-      <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">🌙 6 PM — 6 AM</div>
-      <div style="display:flex;gap:2px;align-items:flex-end;padding:2px 0 4px">${bars2}</div>
+
+    <!-- Check-outs chart -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 10px 8px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px"><i class="ti ti-car" style="color:var(--blue)"></i> All Check-outs</div>
+      ${mkChart('All Check-outs',hourCount,maxC,'var(--blue)')}
       <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:6px"><span style="color:var(--accent);font-weight:700">■</span> peak hour</div>
+    </div>
+
+    <!-- Paid on entry chart -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 10px 8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--navy)"><i class="ti ti-cash" style="color:#2d7a1f"></i> Paid Upon Entry</div>
+        <span style="font-size:11px;font-weight:800;color:#2d7a1f">${totalPaid} vehicle${totalPaid!==1?'s':''}</span>
+      </div>
+      ${mkChart('Paid on Entry',hourPaid,maxP,'#3d8a1e')}
+      <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:6px">Private Vehicle &amp; PWD pay on entry</div>
     </div>
     ${!txLog.length?'<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px">No transactions yet this session.</div>':''}`;
 }
@@ -1958,8 +1991,26 @@ function renderReports(targetId){
 }
 
 
+function changeAdminPass(){
+  const cur=document.getElementById('pass-current').value;
+  const nw=document.getElementById('pass-new').value;
+  const cf=document.getElementById('pass-confirm').value;
+  const errEl=document.getElementById('pass-err');
+  const okEl=document.getElementById('pass-ok');
+  errEl.style.display='none'; okEl.style.display='none';
+  if(cur!==adminPass){errEl.textContent='Current password is incorrect.';errEl.style.display='block';return;}
+  if(nw.length<6){errEl.textContent='New password must be at least 6 characters.';errEl.style.display='block';return;}
+  if(nw!==cf){errEl.textContent='New passwords do not match.';errEl.style.display='block';return;}
+  adminPass=nw;
+  document.getElementById('pass-current').value='';
+  document.getElementById('pass-new').value='';
+  document.getElementById('pass-confirm').value='';
+  okEl.style.display='block';
+  saveToLS();
+  toast('Password updated ✓');
+}
+
 function saveBizInfo(){
-  const n=document.getElementById('biz-name').value.trim();
   const l=document.getElementById('biz-loc').value.trim();
   bizName=n||bizName; bizLoc=l||bizLoc;
   // Keep window globals in sync so Firebase module reads current values
@@ -2075,7 +2126,7 @@ function closeAdminLogin(){
 function submitAdminLogin(){
   const u=document.getElementById('adm-user').value.trim();
   const p=document.getElementById('adm-pass').value;
-  if(u==='admin'&&p==='admin123'){
+  if(u==='admin'&&p===adminPass){
     closeAdminLogin();
     role='admin';
     const btn=document.getElementById('role-btn');
@@ -2181,7 +2232,7 @@ function closeTruncateModal(){
 }
 function submitTruncate(){
   const p=document.getElementById('trunc-pass').value;
-  if(p!=='@dm!n'){
+  if(p!==TRUNC_PASS){
     document.getElementById('trunc-err').style.display='block';
     document.getElementById('trunc-pass').value='';
     document.getElementById('trunc-pass').focus();
@@ -2339,11 +2390,14 @@ function consumeTicket(type){
 // PERSISTENCE — localStorage + JSON export/import
 // ══════════════════════════════════════════════════════
 const LS_KEY = 'parksmartSettings_v1';
+let adminPass = 'PropA123'; // Admin login only — editable in Settings
+const TRUNC_PASS = 'TruncAudit#9'; // Fixed — for Truncate & Spot Audit only
 
 function saveToLS(){
   try{
     const payload={
       bizName, bizLoc,
+      adminPass,
       rates, VEHICLE_TYPES,
       cashiers,
       areas: areas.map(a=>({
@@ -2389,6 +2443,7 @@ function loadFromLS(){
     const d=JSON.parse(raw);
     if(d.bizName)bizName=d.bizName;
     if(d.bizLoc)bizLoc=d.bizLoc;
+    if(d.adminPass)adminPass=d.adminPass;
     if(d.rates)Object.assign(rates,d.rates);
     if(d.VEHICLE_TYPES&&d.VEHICLE_TYPES.length)VEHICLE_TYPES.length=0,d.VEHICLE_TYPES.forEach(t=>VEHICLE_TYPES.push(t));
     if(d.cashiers&&d.cashiers.length)cashiers.length=0,d.cashiers.forEach(c=>cashiers.push(c));
@@ -2502,7 +2557,7 @@ setInterval(updateOnDutyWidget,60000);
 // ══════════════════════════════════════════════════════
 // AUDIT
 // ══════════════════════════════════════════════════════
-const AUDIT_PASS = '@dm!n';
+// Audit pass uses same adminPass variable
 
 function openAuditModal(){
   const m=document.getElementById('audit-modal');
@@ -2521,7 +2576,7 @@ function closeAuditModal(){
 
 function submitAuditPass(){
   const p=document.getElementById('audit-pass').value;
-  if(p!==AUDIT_PASS){
+  if(p!==TRUNC_PASS){
     document.getElementById('audit-err').style.display='block';
     document.getElementById('audit-pass').value='';
     document.getElementById('audit-pass').focus();
