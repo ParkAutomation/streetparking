@@ -7,8 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ACI Parking">
-<title>ACI Street Parking</title>
+<meta name="apple-mobile-web-app-title" content="Street Parking">
+<title>Street Parking</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1622'/%3E%3Ctext x='16' y='24' font-family='Arial Black,sans-serif' font-size='22' font-weight='900' fill='%239fe1cb' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css">
@@ -199,7 +200,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <span onclick="closeTruncateModal()" style="cursor:pointer;font-size:20px;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg);">×</span>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:12px;padding:8px;background:#fcebeb;border-radius:6px;border-left:3px solid var(--danger)">⚠️ This will clear all transactions, active sessions, and log entries. Slots reset to free. Cannot be undone.</div>
-    <div class="field"><label>Enter Truncate Password</label><input id="trunc-pass" type="password" placeholder="Password to confirm" onkeydown="if(event.key==='Enter')submitTruncate()"></div>
+    <div class="field"><label>Enter Truncate Password</label><input id="trunc-pass" type="password" placeholder="Password to confirm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')submitTruncate()"></div>
     <div id="trunc-err" style="font-size:11px;color:var(--danger);margin-bottom:6px;display:none;">Incorrect password.</div>
     <button class="btn btn-danger" onclick="submitTruncate()"><i class="ti ti-trash"></i> Confirm Truncate</button>
   </div>
@@ -242,8 +243,8 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;"><i class="ti ti-shield-lock" style="font-size:18px;color:var(--accent);"></i> Admin Login</div>
       <span onclick="closeAdminLogin()" style="cursor:pointer;font-size:20px;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg);">×</span>
     </div>
-    <div class="field"><label>Username</label><input id="adm-user" placeholder="admin" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('adm-pass').focus()"></div>
-    <div class="field"><label>Password</label><input id="adm-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAdminLogin()"></div>
+    <div class="field"><label>Username</label><input id="adm-user" placeholder="admin" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" style="font-family:monospace;letter-spacing:.5px" onkeydown="if(event.key==='Enter')document.getElementById('adm-pass').focus()"></div>
+    <div class="field"><label>Password</label><input id="adm-pass" type="password" placeholder="••••••••" autocomplete="current-password" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')submitAdminLogin()"></div>
     <div id="adm-err" style="font-size:11px;color:var(--danger);margin-bottom:6px;display:none;">Incorrect username or password.</div>
     <button class="btn btn-primary" onclick="submitAdminLogin()"><i class="ti ti-login"></i> Login as Admin</button>
   </div>
@@ -258,7 +259,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
   </div>
   <div class="topbar" style="position:relative">
     <div class="topbar-left">
-      <div class="app-title" style="font-size:13px"><i class="ti ti-parking"></i> <span class="aci" id="hdr-biz-name">ACI Street Parking</span></div>
+      <div class="app-title" style="font-size:13px"><i class="ti ti-parking" style="font-size:16px;color:#9fe1cb"></i> <span class="aci" id="hdr-biz-name">Street Parking</span></div>
       <div class="sub" id="top-sub" style="font-size:9px;opacity:.8">Loading…</div>
     </div>
     <div class="topbar-center">
@@ -301,14 +302,6 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
               <div class="leg"><div class="leg-dot" style="background:#c0dd97"></div>Vacant Slot</div>
               <div class="leg"><div class="leg-dot" style="background:#f7c1c1"></div>Parked</div>
               <div class="leg"><div class="leg-dot" style="background:#fac775"></div>Reserved</div>
-              <div style="grid-column:1/-1;margin-top:4px;padding-top:4px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-                <span style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;width:100%">Parked by type:</span>
-                <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:10px;background:#fcebeb;color:#a32d2d;border:1px solid #e24b4a">🚗 Car</span>
-                <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:10px;background:#e6f0fb;color:#1a3d7a;border:1px solid #2563b0">🏍 Moto</span>
-                <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:10px;background:#fdf3e3;color:#7a4a00;border:1px solid #c47a1a">🚚 Delivery</span>
-                <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:10px;background:#eaf3de;color:#1f4d0a;border:1px solid #3d8a1e">👴 Senior</span>
-                <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:10px;background:#f3e6fb;color:#4a0352;border:1px solid #7a0585">♿ PWD</span>
-              </div>
             </div>
           </div>
           <div class="map-view-toggle">
@@ -396,6 +389,12 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         <div class="r-row" id="cor-vat-row" style="display:none"><span>VAT (12%) incl.</span><span id="cor-vat" style="color:var(--muted)"></span></div>
         <div class="r-total"><span>Total</span><span id="cor-total"></span></div>
         <div style="text-align:center;margin-top:8px"><span class="badge badge-paid">Paid ✓</span></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:13px;padding:11px" onclick="printThermalReceipt()">
+          <i class="ti ti-printer"></i> Print Receipt
+        </button>
+        <button class="btn btn-danger" style="width:100%;margin-top:6px;font-size:12px;padding:9px" onclick="printLostTicketReceipt()">
+          <i class="ti ti-ticket-off"></i> Lost Ticket — Print Fee Receipt (₱<span id="lost-fee-preview">200</span>)
+        </button>
       </div>
       <!-- Cashier Quick Menu -->
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px;margin-top:10px">
@@ -505,7 +504,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <div class="settings-section">
         <div class="settings-section-title"><i class="ti ti-lock"></i> Admin / Owner Password</div>
         <div class="card" style="margin-bottom:4px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Used for <b>Admin login only</b>. Default: <b>PropA123</b><br><span style="color:var(--danger)">Truncate &amp; Spot Audit have a separate fixed password.</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Used for <b>Admin login only</b>. Default: <b>PropA123</b><br><span style="color:var(--danger)">Truncate &amp; Spot Audit use a separate fixed password.</span></div>
           <div class="field"><label>Current Password</label><input id="pass-current" type="password" placeholder="Enter current password"></div>
           <div class="field"><label>New Password</label><input id="pass-new" type="password" placeholder="New password (min 6 chars)"></div>
           <div class="field"><label>Confirm New Password</label><input id="pass-confirm" type="password" placeholder="Repeat new password"></div>
@@ -769,6 +768,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       bizName:      window.bizName,
       bizLoc:       window.bizLoc,
       rates:        window.rates,
+      lostTicketFee:window.lostTicketFee,
       VEHICLE_TYPES:window.VEHICLE_TYPES,
       cashiers:     window.cashiers,
       areas: window.areas.map(a=>({
@@ -840,6 +840,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         if(d.bizName)  window.bizName = d.bizName;
         if(d.bizLoc)   window.bizLoc  = d.bizLoc;
         if(d.rates)    Object.assign(window.rates, d.rates);
+        if(d.lostTicketFee != null) window.lostTicketFee = d.lostTicketFee;
         if(d.VEHICLE_TYPES && d.VEHICLE_TYPES.length){
           window.VEHICLE_TYPES.length=0;
           d.VEHICLE_TYPES.forEach(t => window.VEHICLE_TYPES.push(t));
@@ -942,6 +943,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 // ══════════════════════════════════════════════════════
 const DEFAULT_TYPES = ['Private Vehicle','Motorcycle','Delivery','QC Senior','PWD'];
 let VEHICLE_TYPES = [...DEFAULT_TYPES];
+let lostTicketFee = 200; // configurable by admin
 let rates = {
   'Private Vehicle':{mode:'payg',firstRate:60,succRate:30,overnight:0,overnightEnabled:false,enabled:true},
   'Motorcycle':{mode:'tiered',hours:[{upto:2,rate:50},{upto:999,rate:10}],overnight:0,overnightEnabled:false,enabled:true},
@@ -1443,9 +1445,24 @@ function checkOut(){
   }
   document.getElementById('cor-total').textContent='₱'+fee;
   document.getElementById('co-receipt').classList.add('show');
+  // Update lost ticket fee preview
+  const lpEl=document.getElementById('lost-fee-preview');if(lpEl)lpEl.textContent=lostTicketFee;
   const _logEntry={slot:s.id,area:a.name,side:sideLabel,plate,type:s.type,dur,fee,
     upfrontPaid:result.upfrontPaid||0,
     time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),ts:Date.now()};
+
+  // Store for thermal print
+  window.lastReceiptData={
+    biz:bizName, loc:bizLoc,
+    slot:s.id, area:a.name, side:sideLabel,
+    plate, type:s.type, dur, fee,
+    breakdown:document.getElementById('cor-breakdown').textContent,
+    upfrontPaid:result.upfrontPaid||0,
+    additionalFee:result.additionalFee||0,
+    discount:result.discountAmt||0,
+    cashier:dutyTickets.cashierOnDuty||'—',
+    time:_logEntry.time, ts:_logEntry.ts
+  };
   txLog.unshift(_logEntry);
   pushLog(_logEntry);
   s.status='free';s.plate='';s.type='';s.since=null;delete sessions[s.id];
@@ -1495,7 +1512,18 @@ function toggleRateEnabled(key){
 }
 function buildRatesEditor(){
   const el=document.getElementById('rates-editor');
-  el.innerHTML=VEHICLE_TYPES.map(t=>{
+  // ── Lost Ticket Fee card (always at top) ──
+  const lostCard=`<div class="rate-section" style="border:2px solid var(--danger);background:#fff8f8">
+    <div class="rate-type-hdr" style="background:#fcebeb"><span style="color:var(--danger)"><i class="ti ti-ticket-off" style="font-size:13px"></i> Lost Ticket Fee</span><span style="font-size:10px;color:var(--muted)">Admin-editable</span></div>
+    <div class="rate-note" style="color:var(--danger)">Fee charged when a parker cannot present the original ticket upon exit.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+      <label style="font-size:11px;color:var(--muted);flex-shrink:0">Lost Ticket Fee (₱)</label>
+      <input type="number" id="lost-ticket-fee-input" value="${lostTicketFee}" min="0" step="10"
+        style="width:100px;padding:6px 10px;border:1.5px solid var(--danger);border-radius:6px;background:var(--card);color:var(--text);font-size:15px;font-weight:800;text-align:center">
+      <button class="btn btn-sm btn-danger" onclick="saveLostTicketFee()" style="white-space:nowrap"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>`;
+  el.innerHTML = lostCard + VEHICLE_TYPES.map(t=>{
     const key=safeKey(t),r=rates[t],isDefault=DEFAULT_TYPES.includes(t);
 
     // ── PAYG: Private Vehicle ──
@@ -1582,6 +1610,14 @@ function buildRatesEditor(){
   }).join('');
 }
 function toggleOvEnabled(key){const en=document.getElementById('ov-enabled-'+key).checked;document.getElementById('ov-rate-'+key).disabled=!en;}
+function saveLostTicketFee(){
+  const v=parseFloat(document.getElementById('lost-ticket-fee-input').value);
+  if(isNaN(v)||v<0){toast('Enter a valid amount');return;}
+  lostTicketFee=v;
+  window.lostTicketFee=v;
+  toast('Lost ticket fee set to ₱'+v+' ✓');
+  saveConfig();
+}
 function saveRates(){
   VEHICLE_TYPES.forEach(t=>{
     const key=safeKey(t),r=rates[t];
@@ -1991,6 +2027,197 @@ function renderReports(targetId){
 }
 
 
+// ══════════════════════════════════════════════════════
+// THERMAL RECEIPT PRINTER
+// Works via: WiFi print (browser print dialog → thermal driver)
+//            Bluetooth EPSON POS (pair printer, use browser print)
+// Format: 58mm or 80mm — auto-fits via CSS max-width
+// ══════════════════════════════════════════════════════
+function printThermalReceipt(){
+  const d=window.lastReceiptData;
+  if(!d){toast('No receipt data. Complete a check-out first.');return;}
+
+  const ts=new Date(d.ts);
+  const dateStr=ts.toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric'});
+  const timeStr=ts.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+  const txNum='TXN-'+String(d.ts).slice(-8).toUpperCase();
+
+  const html=`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Receipt — ${d.plate}</title>
+<style>
+  /* 58mm = 220px / 80mm = 302px — printer driver handles scaling */
+  @page{ margin:0; size:80mm auto; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    font-family:'Courier New',Courier,monospace;
+    font-size:11px;
+    width:80mm;
+    max-width:100%;
+    padding:4mm 4mm 8mm;
+    color:#000;
+    background:#fff;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .center{ text-align:center; }
+  .bold{ font-weight:bold; }
+  .big{ font-size:15px; font-weight:bold; }
+  .huge{ font-size:20px; font-weight:bold; }
+  .divider{ border-top:1px dashed #000; margin:4px 0; }
+  .divider-solid{ border-top:1px solid #000; margin:4px 0; }
+  .row{ display:flex; justify-content:space-between; padding:1px 0; }
+  .row .label{ color:#333; }
+  .row .val{ font-weight:bold; text-align:right; max-width:55%; }
+  .total-row{ display:flex; justify-content:space-between; border-top:2px solid #000; border-bottom:2px solid #000; padding:3px 0; margin:4px 0; font-size:14px; font-weight:bold; }
+  .footer{ font-size:9px; color:#555; text-align:center; margin-top:6px; line-height:1.5; }
+  .paid-stamp{ border:2px solid #000; border-radius:4px; text-align:center; padding:3px; font-size:13px; font-weight:bold; letter-spacing:2px; margin:6px 0; }
+  .qr-placeholder{ border:1px dashed #aaa; border-radius:4px; text-align:center; padding:8px 4px; font-size:9px; color:#888; margin:6px 0; }
+  @media screen{
+    body{ border:1px dashed #ccc; margin:20px auto; box-shadow:0 2px 12px rgba(0,0,0,.12); }
+  }
+</style>
+</head>
+<body>
+  <div class="center bold big">${d.biz||'ARANETA CITY'}</div>
+  <div class="center" style="font-size:10px">${d.loc||'Car Park Operations'}</div>
+  <div class="divider"></div>
+
+  <div class="center bold" style="font-size:13px;letter-spacing:1px">PARKING RECEIPT</div>
+  <div class="center" style="font-size:9px;color:#555">${dateStr} &nbsp; ${timeStr}</div>
+  <div class="center" style="font-size:9px;color:#555">${txNum}</div>
+  <div class="divider"></div>
+
+  <div class="row"><span class="label">Slot</span><span class="val">${d.slot} — ${d.side} (${d.area})</span></div>
+  <div class="row"><span class="label">Plate No.</span><span class="val bold">${d.plate}</span></div>
+  <div class="row"><span class="label">Type</span><span class="val">${d.type}</span></div>
+  <div class="row"><span class="label">Duration</span><span class="val">${d.dur}</span></div>
+  ${d.breakdown?`<div class="row"><span class="label">Breakdown</span><span class="val" style="font-size:9px">${d.breakdown}</span></div>`:''}
+  <div class="divider"></div>
+
+  ${d.upfrontPaid>0?`<div class="row"><span class="label">Paid on Entry</span><span class="val">P${d.upfrontPaid}.00</span></div>`:''}
+  ${d.additionalFee>0?`<div class="row"><span class="label">Additional</span><span class="val">P${d.additionalFee}.00</span></div>`:''}
+  ${d.discount>0?`<div class="row"><span class="label">PWD Disc. (20%)</span><span class="val">-P${d.discount}.00</span></div>`:''}
+
+  <div class="total-row"><span>TOTAL</span><span>P${d.fee}.00</span></div>
+
+  <div class="paid-stamp">★ PAID ★</div>
+
+  <div class="divider-solid"></div>
+  <div class="row" style="font-size:9px"><span class="label">Cashier</span><span>${d.cashier}</span></div>
+  <div class="divider"></div>
+
+  <div class="footer">
+    Thank you for parking!<br>
+    Keep this receipt. Management not<br>
+    responsible for loss or damage.<br>
+    <br>
+    ${d.biz} Car Park<br>
+    ${d.loc}
+  </div>
+  <script>window.onload=()=>{ window.print(); window.onafterprint=()=>window.close(); }<\/script>
+</body>
+</html>`;
+
+  const w=window.open('','_blank','width=340,height=600,toolbar=0,menubar=0,scrollbars=1');
+  if(!w){toast('Allow pop-ups for printing.'); return;}
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+function printLostTicketReceipt(){
+  const d=window.lastReceiptData;
+  if(!d){toast('No receipt data. Complete a check-out first.');return;}
+  const fee=lostTicketFee;
+  const ts=new Date(d.ts);
+  const dateStr=ts.toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric'});
+  const timeStr=ts.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+  const txNum='LT-'+String(d.ts).slice(-8).toUpperCase();
+
+  const html=`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Lost Ticket — ${d.plate||'N/A'}</title>
+<style>
+  @page{ margin:0; size:80mm auto; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    font-family:'Courier New',Courier,monospace;
+    font-size:11px;
+    width:80mm;
+    max-width:100%;
+    padding:4mm 4mm 8mm;
+    color:#000;
+    background:#fff;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .center{ text-align:center; }
+  .bold{ font-weight:bold; }
+  .big{ font-size:15px; font-weight:bold; }
+  .divider{ border-top:1px dashed #000; margin:4px 0; }
+  .divider-solid{ border-top:1px solid #000; margin:4px 0; }
+  .row{ display:flex; justify-content:space-between; padding:1px 0; }
+  .row .label{ color:#333; }
+  .row .val{ font-weight:bold; text-align:right; max-width:55%; }
+  .total-row{ display:flex; justify-content:space-between; border-top:2px solid #000; border-bottom:2px solid #000; padding:3px 0; margin:4px 0; font-size:14px; font-weight:bold; }
+  .footer{ font-size:9px; color:#555; text-align:center; margin-top:6px; line-height:1.5; }
+  .warn-banner{ border:2px solid #000; border-radius:4px; text-align:center; padding:4px; font-size:11px; font-weight:bold; letter-spacing:1px; margin:6px 0; background:#f5f5f5; }
+  @media screen{
+    body{ border:1px dashed #ccc; margin:20px auto; box-shadow:0 2px 12px rgba(0,0,0,.12); }
+  }
+</style>
+</head>
+<body>
+  <div class="center bold big">${d.biz||'STREET PARKING'}</div>
+  <div class="center" style="font-size:10px">${d.loc||'Car Park Operations'}</div>
+  <div class="divider"></div>
+
+  <div class="center bold" style="font-size:13px;letter-spacing:1px">LOST TICKET FEE</div>
+  <div class="center" style="font-size:9px;color:#555">${dateStr} &nbsp; ${timeStr}</div>
+  <div class="center" style="font-size:9px;color:#555">${txNum}</div>
+  <div class="divider"></div>
+
+  <div class="warn-banner">⚠ LOST / NO TICKET PRESENTED</div>
+
+  <div class="row"><span class="label">Slot</span><span class="val">${d.slot||'—'}</span></div>
+  <div class="row"><span class="label">Plate No.</span><span class="val bold">${d.plate||'—'}</span></div>
+  <div class="row"><span class="label">Vehicle Type</span><span class="val">${d.type||'—'}</span></div>
+  <div class="row"><span class="label">Duration</span><span class="val">${d.dur||'—'}</span></div>
+  <div class="divider"></div>
+
+  <div class="row"><span class="label">Parking Fee</span><span class="val">P${d.fee||0}.00</span></div>
+  <div class="row"><span class="label">Lost Ticket Fee</span><span class="val bold">P${fee}.00</span></div>
+
+  <div class="total-row"><span>TOTAL COLLECTED</span><span>P${(d.fee||0)+fee}.00</span></div>
+
+  <div class="divider-solid"></div>
+  <div class="row" style="font-size:9px"><span class="label">Cashier</span><span>${d.cashier||'—'}</span></div>
+  <div class="divider"></div>
+
+  <div class="footer">
+    Lost ticket fee: P${fee}.00<br>
+    Please keep your ticket at all times.<br>
+    Management is not responsible for<br>
+    loss or damage to vehicles.<br>
+    <br>
+    ${d.biz} &bull; ${d.loc}
+  </div>
+  <script>window.onload=()=>{ window.print(); window.onafterprint=()=>window.close(); }<\/script>
+</body>
+</html>`;
+
+  const w=window.open('','_blank','width=340,height=620,toolbar=0,menubar=0,scrollbars=1');
+  if(!w){toast('Allow pop-ups for printing.'); return;}
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
 function changeAdminPass(){
   const cur=document.getElementById('pass-current').value;
   const nw=document.getElementById('pass-new').value;
@@ -2125,8 +2352,9 @@ function closeAdminLogin(){
 }
 function submitAdminLogin(){
   const u=document.getElementById('adm-user').value.trim();
-  const p=document.getElementById('adm-pass').value;
-  if(u==='admin'&&p===adminPass){
+  const p=document.getElementById('adm-pass').value.trim();
+  const validUser=(u==='admin'||u==='@dm!n');
+  if(validUser&&p===adminPass){
     closeAdminLogin();
     role='admin';
     const btn=document.getElementById('role-btn');
@@ -2231,7 +2459,7 @@ function closeTruncateModal(){
   document.getElementById('truncate-modal').style.display='none';
 }
 function submitTruncate(){
-  const p=document.getElementById('trunc-pass').value;
+  const p=document.getElementById('trunc-pass').value.trim();
   if(p!==TRUNC_PASS){
     document.getElementById('trunc-err').style.display='block';
     document.getElementById('trunc-pass').value='';
@@ -2391,14 +2619,14 @@ function consumeTicket(type){
 // ══════════════════════════════════════════════════════
 const LS_KEY = 'parksmartSettings_v1';
 let adminPass = 'PropA123'; // Admin login only — editable in Settings
-const TRUNC_PASS = 'TruncAudit#9'; // Fixed — for Truncate & Spot Audit only
+const TRUNC_PASS = 'ACI888'; // Fixed — for Truncate & Spot Audit only
 
 function saveToLS(){
   try{
     const payload={
       bizName, bizLoc,
       adminPass,
-      rates, VEHICLE_TYPES,
+      rates, lostTicketFee, VEHICLE_TYPES,
       cashiers,
       areas: areas.map(a=>({
         id:a.id, name:a.name,
@@ -2445,6 +2673,7 @@ function loadFromLS(){
     if(d.bizLoc)bizLoc=d.bizLoc;
     if(d.adminPass)adminPass=d.adminPass;
     if(d.rates)Object.assign(rates,d.rates);
+    if(d.lostTicketFee!=null)lostTicketFee=d.lostTicketFee;
     if(d.VEHICLE_TYPES&&d.VEHICLE_TYPES.length)VEHICLE_TYPES.length=0,d.VEHICLE_TYPES.forEach(t=>VEHICLE_TYPES.push(t));
     if(d.cashiers&&d.cashiers.length)cashiers.length=0,d.cashiers.forEach(c=>cashiers.push(c));
     if(d.areas&&d.areas.length){
@@ -2468,7 +2697,7 @@ function exportSettings(){
   const payload={
     _note:'ACI ParkSmart settings export — import this on any device to restore configuration',
     bizName, bizLoc,
-    rates, VEHICLE_TYPES,
+    rates, lostTicketFee, VEHICLE_TYPES,
     cashiers,
     areas: areas.map(a=>({id:a.id,name:a.name,sideALabel:a.sideALabel,sideBLabel:a.sideBLabel,
       slots:a.slots.map(s=>({id:s.id,area:s.area,side:s.side,num:s.num,status:'free',plate:'',type:'',since:null,ticket:null}))})),
@@ -2492,6 +2721,7 @@ function importSettings(ev){
       if(d.bizName)bizName=d.bizName;
       if(d.bizLoc)bizLoc=d.bizLoc;
       if(d.rates)Object.assign(rates,d.rates);
+      if(d.lostTicketFee!=null)lostTicketFee=d.lostTicketFee;
       if(d.VEHICLE_TYPES&&d.VEHICLE_TYPES.length){VEHICLE_TYPES.length=0;d.VEHICLE_TYPES.forEach(t=>VEHICLE_TYPES.push(t));}
       if(d.cashiers&&d.cashiers.length){cashiers.length=0;d.cashiers.forEach(c=>cashiers.push(c));}
       if(d.areas&&d.areas.length){areas.length=0;d.areas.forEach(a=>areas.push(a));}
@@ -2523,6 +2753,7 @@ function clearLocalStorage(){
 //    (window._fbBootDone prevents LS from re-running after FB has loaded)
 window._fbBootDone = false;
 loadFromLS();
+window.lostTicketFee = lostTicketFee; // expose for Firebase module
 switchArea(currentAreaId||'area-1');
 // Apply loaded biz info to header
 (function(){
@@ -2575,7 +2806,7 @@ function closeAuditModal(){
 }
 
 function submitAuditPass(){
-  const p=document.getElementById('audit-pass').value;
+  const p=document.getElementById('audit-pass').value.trim();
   if(p!==TRUNC_PASS){
     document.getElementById('audit-err').style.display='block';
     document.getElementById('audit-pass').value='';
@@ -2788,7 +3019,7 @@ window.updateOnDutyWidget = updateOnDutyWidget;
     <!-- Password gate -->
     <div id="audit-gate">
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Enter audit password to view sales summary.</div>
-      <div class="field"><label>Audit Password</label><input id="audit-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitAuditPass()"></div>
+      <div class="field"><label>Audit Password</label><input id="audit-pass" type="password" placeholder="••••••••" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')submitAuditPass()"></div>
       <div id="audit-err" style="font-size:11px;color:var(--danger);margin-bottom:6px;display:none">Incorrect password.</div>
       <button class="btn btn-primary" onclick="submitAuditPass()"><i class="ti ti-lock-open"></i> Unlock</button>
     </div>

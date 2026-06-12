@@ -1,7 +1,7 @@
 // ParkSmart Service Worker
 // ─────────────────────────────────────────────────────
 // BUMP THIS on every deploy to force all users to get the new file
-const APP_VERSION = 'v2026-06-11-4';
+const APP_VERSION = 'v2026-06-12-4';
 const CACHE_NAME  = 'parksmart-' + APP_VERSION;
 
 const PRECACHE = ['./', './index.html'];
